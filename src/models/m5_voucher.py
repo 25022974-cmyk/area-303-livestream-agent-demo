@@ -36,7 +36,7 @@ def calculate_estimated_sales(
     alpha: float = 0.5,
     beta: float = 0.2,
 ) -> float:
-    """Calculates customer demand multiplier from discount and voucher attractiveness."""
+    """Hàm tính toán doanh số ước tính dựa trên các thông số đầu vào, bao gồm giá gốc, giá sau giảm giá, mức giảm giá của voucher, điều kiện sử dụng voucher, và các hệ số alpha, beta để điều chỉnh nhu cầu khách hàng."""
     if price_original <= 0 or ms <= 0:
         return max(0.0, ms)
 
@@ -46,12 +46,12 @@ def calculate_estimated_sales(
 
     # Customer attraction equation
     factor = 1.0 + alpha * (total_savings / price_original) - beta * (min_spend / 200_000.0)
-    factor = max(0.0, factor)
+    factor = max(0.0, factor)       # factor là nhân tố tăng/giảm nhu cầu khách hàng dựa trên mức giảm giá và điều kiện sử dụng voucher
     return ms * factor
 
 
 def generate_sku_config_grid(orig_price: float) -> List[Dict[str, Any]]:
-    """Generates 168 configuration points for a given SKU."""
+    """Hàm tạo lưới cấu hình cho một SKU dựa trên giá gốc. Mỗi cấu hình bao gồm discount_pct, price (sau giảm giá), voucher_disc, min_spend."""
     configs: List[Dict[str, Any]] = []
     for d in DISCOUNTS:
         p = round(orig_price * (1.0 - d / 100.0))
@@ -72,26 +72,33 @@ def optimize_voucher_budget(
     alpha: float = 0.5,
     beta: float = 0.2,
     gift_cost: float = 0.0,
+    must_select_all: bool = False,
 ) -> Dict[str, Any]:
     """
-    Solves Multiple-Choice 0/1 Knapsack to select optimal voucher & discount configuration
-    for each SKU to maximize estimated sales under monthly budget constraint.
+    Hàm tối ưu hóa việc phân bổ voucher cho các SKU dựa trên ngân sách, chi phí quà tặng, và các thông số alpha, beta.
+    Sử dụng thuật toán Multiple-Choice Knapsack DP để chọn cấu hình tốt nhất cho mỗi SKU nhằm tối đa hóa doanh số ước tính trong khi tuân thủ ngân sách.
+
+    Tham số must_select_all:
+      - False (mặc định): giữ hành vi cũ — cho phép bỏ qua một SKU (chọn tập con các SKU).
+      - True: bắt buộc chọn đúng một cấu hình voucher cho mỗi SKU hợp lệ trong đầu vào.
+        Nếu không thể chọn đủ tất cả SKU (vì có SKU hợp lệ không có cấu hình nào, hoặc
+        vượt ngân sách), trả về kết quả có trường `error` mô tả lý do và `sku_allocations` rỗng.
     """
     effective_budget = max(0.0, float(budget_vnd) - float(gift_cost))
     max_w = int(effective_budget / SCALE)
 
-    sku_groups: List[Tuple[Dict[str, Any], List[Dict[str, Any]]]] = []
+    sku_groups: List[Tuple[Dict[str, Any], List[Dict[str, Any]]]] = [] #lưu cấu hính của từng SKU
 
     for r in data_pool:
-        orig = to_float(r.get("price_original")) or to_float(r.get("price"))
-        ms = to_float(r.get("monthly_sold_value"))
+        orig = to_float(r.get("price_original")) or to_float(r.get("price"))    # giá gốc
+        ms = to_float(r.get("monthly_sold_value"))                              # doanh số trung bình hàng tháng
         if orig <= 0 or ms <= 0:
             continue
 
         configs = generate_sku_config_grid(orig)
         candidates: List[Dict[str, Any]] = []
 
-        # Baseline (no voucher, 0% discount)
+        # đây là doanh thu kỳ vọng khi không áp dụng voucher hay giảm giá, để đảm bảo rằng luôn có một lựa chọn mặc định cho mỗi SKU
         base_sales = calculate_estimated_sales(ms, orig, 0.0, orig, 0.0, alpha, beta)
         candidates.append({
             "discount_pct": 0.0,
@@ -106,6 +113,8 @@ def optimize_voucher_budget(
         for cfg in configs:
             if cfg["discount_pct"] > DISCOUNT_CAP_PCT:
                 continue
+
+            # Tính toán doanh số ước tính dựa trên cấu hình hiện tại
             est_s = calculate_estimated_sales(
                 ms, cfg["price"], cfg["voucher_disc"], orig, cfg["min_spend"], alpha, beta
             )
@@ -123,13 +132,37 @@ def optimize_voucher_budget(
                     "cost_w": cost_w,
                 })
 
+        # Khi must_select_all=True, một SKU hợp lệ mà không còn cấu hình nào thỏa
+        # (danh sách scored rỗng) là vô nghiệm: không thể "chọn tất cả" được nữa.
+        if must_select_all and not candidates:
+            return {
+                "budget": budget_vnd,
+                "used_voucher_cost": 0,
+                "gift_cost": round(gift_cost),
+                "total_used": round(gift_cost),
+                "remaining_budget": round(max(0.0, budget_vnd - gift_cost)),
+                "budget_utilization_pct": 0.0,
+                "total_estimated_sales": 0,
+                "n_selected_skus": 0,
+                "sku_allocations": [],
+                "error": f"SKU {r.get('item_id')} has no valid voucher config",
+            }
+
         sku_groups.append((r, candidates))
 
     # Multiple-Choice Knapsack DP: dp[w] = (max_value, [chosen_config_per_sku])
     dp: Dict[int, Tuple[float, List[Dict[str, Any]]]] = {0: (0.0, [])}
 
     for sku, candidates in sku_groups:
-        new_dp: Dict[int, Tuple[float, List[Dict[str, Any]]]] = {}
+        if must_select_all:
+            # Bắt buộc chọn đúng một cấu hình cho SKU này — không còn lựa chọn "bỏ qua SKU".
+            # DP mới rỗng, chỉ chứa các trạng thái sinh ra khi chọn một cấu hình của nhóm này.
+            new_dp: Dict[int, Tuple[float, List[Dict[str, Any]]]] = {}
+        else:
+            # Hành vi cũ: cho phép giữ nguyên trạng thái DP cũ (skip nhóm này).
+            # Bắt đầu từ bản sao DP cũ để "không chọn SKU đó" vẫn là lựa chọn hợp lệ.
+            new_dp = {w: (v, list(p)) for w, (v, p) in dp.items()}
+
         for w_curr, (val_curr, picks_curr) in dp.items():
             for cand in candidates:
                 w_next = w_curr + cand["cost_w"]
@@ -139,9 +172,38 @@ def optimize_voucher_budget(
                         new_dp[w_next] = (val_next, picks_curr + [dict(cand, sku=sku)])
         if new_dp:
             dp = new_dp
+        elif must_select_all:
+            # Không thể chọn bất kỳ cấu hình nào của SKU này trong ngân sách.
+            return {
+                "budget": budget_vnd,
+                "used_voucher_cost": 0,
+                "gift_cost": round(gift_cost),
+                "total_used": round(gift_cost),
+                "remaining_budget": round(max(0.0, budget_vnd - gift_cost)),
+                "budget_utilization_pct": 0.0,
+                "total_estimated_sales": 0,
+                "n_selected_skus": 0,
+                "sku_allocations": [],
+                "error": "cannot select all SKUs within budget",
+            }
 
     best_w = max(dp.keys(), key=lambda w: dp[w][0]) if dp else 0
     best_val, best_picks = dp.get(best_w, (0.0, []))
+
+    # Khi must_select_all=True, kiểm tra số SKU được chọn có đúng bằng số nhóm (số SKU hợp lệ) hay không.
+    if must_select_all and len(best_picks) != len(sku_groups):
+        return {
+            "budget": budget_vnd,
+            "used_voucher_cost": 0,
+            "gift_cost": round(gift_cost),
+            "total_used": round(gift_cost),
+            "remaining_budget": round(max(0.0, budget_vnd - gift_cost)),
+            "budget_utilization_pct": 0.0,
+            "total_estimated_sales": 0,
+            "n_selected_skus": 0,
+            "sku_allocations": [],
+            "error": "cannot select all SKUs within budget",
+        }
 
     sku_results: List[Dict[str, Any]] = []
     total_cost_vnd = 0.0

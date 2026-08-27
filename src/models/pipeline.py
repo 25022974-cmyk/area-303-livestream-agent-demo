@@ -56,6 +56,7 @@ def run_pipeline(
             beta = float(learned_params["beta"])
 
     budget = float(cfg.get("budget_voucher_month", 500_000_000.0))
+    must_select_all = bool(cfg.get("must_select_all", True))
     session_id = str(uuid.uuid4())
     snaps = snapshots if snapshots is not None else data_pool
 
@@ -96,11 +97,15 @@ def run_pipeline(
         alpha=alpha,
         beta=beta,
         gift_cost=total_gift_cost,
+        must_select_all=must_select_all,
     )
 
     # Summary KPI lift estimation
     baseline_gmv = sum(to_float(r.get("monthly_sold_value")) for r in data_pool)
-    projected_gmv = float(voucher_plan.get("total_estimated_sales", baseline_gmv))
+    m5_error = str(voucher_plan.get("error", ""))
+    # Khi M5 báo lỗi (must_select_all=True không thể chọn hết), total_estimated_sales=0
+    # sẽ cho lift sai nghĩa (−100%); dùng baseline để lift = 0% (trung tính).
+    projected_gmv = baseline_gmv if m5_error else float(voucher_plan.get("total_estimated_sales", baseline_gmv))
     estimated_lift_pct = round(((projected_gmv - baseline_gmv) / baseline_gmv) * 100.0, 1) if baseline_gmv > 0 else 0.0
 
     return {

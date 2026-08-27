@@ -12,6 +12,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let allSkus = [];
   let selectedSkuIds = new Set();
   let selectedComboIds = new Set();
+  let m5RerunTimer = null; // timer debounce re-run M5 mỗi khi tick đổi
+  let budgetRerunTimer = null; // timer debounce re-run M5 mỗi khi ngân sách đổi
+  let DEFAULT_BUDGET = 500000000; // mặc định khi ô ngân sách để trống
   let filters = {
     line: "",
     gift: "",
@@ -48,6 +51,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const statBudgetUsed = document.getElementById("stat-budget-used");
   const statSelectedCount = document.getElementById("selected-sku-count");
 
+  // Budget Input (SECTION 4)
+  const budgetInput = document.getElementById("budget-input");
+  const budgetHint = document.getElementById("budget-hint");
+
+  // Đọc ngân sách hiện tại từ ô nhập; để trống/invalid → dùng DEFAULT_BUDGET (500M).
+  function currentBudget() {
+    if (budgetInput) {
+      const v = Number(budgetInput.value);
+      if (Number.isFinite(v) && v > 0) return v;
+    }
+    return DEFAULT_BUDGET;
+  }
+
   // Initialize Date Input
   if (liveDateInput) {
     liveDateInput.value = selectedDate;
@@ -63,7 +79,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (mainContentEl) mainContentEl.style.display = "none";
 
     try {
-      const budgetVal = customBudget !== null ? customBudget : 500000000;
+      // Ngân sách: ưu tiên tham số truyền vào, rồi tới ô nhập, rồi mặc định 500M.
+      const budgetVal = customBudget !== null ? customBudget : currentBudget();
       const resp = await fetch("/api/pipeline/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -78,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pipelineData = res.recommendation;
         allSkus = pipelineData.m2_heros || [];
 
-        // Auto-select top 8 SKUs initially
+        // Auto-select top 8 SKUs initially (hành vi gốc — tick tự do, không khoá).
         selectedSkuIds.clear();
         allSkus.slice(0, 8).forEach(s => selectedSkuIds.add(s.item_id));
 
@@ -101,6 +118,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         renderUI();
+        // Sau khi load full pipeline lần đầu, re-run M5 cho đúng 8 SKU đã auto-tick
+        // (voucher container ban đầu hiển thị cho tập đã tick, không phải toàn bộ data_pool).
+        scheduleM5Rerun();
       } else {
         AREA303.toast("Lỗi tải dữ liệu: " + res.message, "error");
       }
@@ -110,6 +130,59 @@ document.addEventListener("DOMContentLoaded", () => {
     } finally {
       if (loadingEl) loadingEl.style.display = "none";
       if (mainContentEl) mainContentEl.style.display = "flex";
+    }
+  }
+
+  // Re-run M5 cho đúng tập SKU đã tick. Debounce 300ms để gộp nhiều tick liên tiếp.
+  function scheduleM5Rerun() {
+    clearTimeout(m5RerunTimer);
+    m5RerunTimer = setTimeout(runM5ForSelected, 300);
+  }
+
+  async function runM5ForSelected() {
+    if (!pipelineData) return;
+    const ids = Array.from(selectedSkuIds);
+    if (ids.length === 0) {
+      // Chưa tick SKU nào: voucher rỗng, KPI 0. Không gửi request.
+      pipelineData.m5_voucher = pipelineData.m5_voucher || {};
+      pipelineData.m5_voucher.sku_allocations = [];
+      pipelineData.m5_voucher.n_selected_skus = 0;
+      pipelineData.m5_voucher.total_estimated_sales = 0;
+      delete pipelineData.m5_voucher.error;
+      pipelineData.summary = pipelineData.summary || {};
+      pipelineData.summary.selected_skus = 0;
+      renderVouchers();
+      renderKPIs();
+      return;
+    }
+    try {
+      const resp = await fetch("/api/pipeline/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shop_id: shopId,
+          budget_voucher_month: currentBudget(),
+          item_ids: ids,
+          must_select_all: true,
+        }),
+      });
+      const res = await resp.json();
+      if (res.status === "ok") {
+        const rec = res.recommendation;
+        // CHỈ cập nhật m5_voucher + summary; KHÔNG re-render bảng SKU (tránh mất tick).
+        pipelineData.m5_voucher = rec.m5_voucher;
+        pipelineData.summary = rec.summary;
+        renderVouchers();
+        renderKPIs();
+        if (rec.m5_voucher && rec.m5_voucher.error) {
+          AREA303.toast("M5: " + rec.m5_voucher.error, "warn");
+        }
+      } else {
+        AREA303.toast("Lỗi re-run M5: " + (res.message || ""), "error");
+      }
+    } catch (err) {
+      console.error(err);
+      AREA303.toast("Lỗi kết nối khi re-run M5", "error");
     }
   }
 
@@ -313,6 +386,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target.checked) selectedSkuIds.add(id);
         else selectedSkuIds.delete(id);
         if (statSelectedCount) statSelectedCount.textContent = selectedSkuIds.size;
+        // Re-run M5 cho đúng tập đã tick (debounce)
+        scheduleM5Rerun();
       });
     });
   }
@@ -419,6 +494,20 @@ document.addEventListener("DOMContentLoaded", () => {
   if (filterMaxPrice) filterMaxPrice.addEventListener("input", (e) => { filters.maxPrice = Number(e.target.value) || null; renderSkusTable(); });
   if (filterSearch) filterSearch.addEventListener("input", (e) => { filters.search = e.target.value; renderSkusTable(); });
 
+  // Budget Input: gõ → debounce 600ms → re-run M5 (cho tập SKU đã tick).
+  // Việc đổi ngân sách chỉ ảnh hưởng M5 nên tái dùng runM5ForSelected (không load lại cả pipeline).
+  if (budgetInput) {
+    budgetInput.addEventListener("input", () => {
+      const v = Number(budgetInput.value);
+      if (budgetHint) {
+        if (Number.isFinite(v) && v > 0) budgetHint.textContent = `M5 sẽ chạy lại với ${AREA303.vnd(v)} (sau ~0.6 giây)`;
+        else budgetHint.textContent = "Để trống = dùng ngân sách mặc định 500M ₫";
+      }
+      clearTimeout(budgetRerunTimer);
+      budgetRerunTimer = setTimeout(runM5ForSelected, 600);
+    });
+  }
+
   if (btnAutoPick) {
     btnAutoPick.addEventListener("click", () => {
       selectedSkuIds.clear();
@@ -426,6 +515,8 @@ document.addEventListener("DOMContentLoaded", () => {
       renderSkusTable();
       if (statSelectedCount) statSelectedCount.textContent = selectedSkuIds.size;
       AREA303.toast("Đã tự động chọn Top 10 SKU có Hero Score cao nhất!", "success");
+      // Re-run M5 cho tập Top 10 mới
+      scheduleM5Rerun();
     });
   }
 

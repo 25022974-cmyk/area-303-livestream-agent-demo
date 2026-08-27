@@ -38,6 +38,8 @@ def run_pipeline_endpoint():
         alpha = body.get("alpha")
         beta = body.get("beta")
         use_dp = body.get("use_dp_knapsack")
+        must_select_all = body.get("must_select_all")
+        item_ids = body.get("item_ids")  # Optional[List[str]]: lọc data_pool chỉ giữ SKU đã tick
 
         result = pipeline_service.run_for_shop(
             shop_id=sid,
@@ -45,6 +47,8 @@ def run_pipeline_endpoint():
             alpha=float(alpha) if alpha is not None else None,
             beta=float(beta) if beta is not None else None,
             use_dp_knapsack=bool(use_dp) if use_dp is not None else None,
+            must_select_all=bool(must_select_all) if must_select_all is not None else None,
+            item_ids=item_ids,
         )
 
         return jsonify({"status": "ok", "recommendation": result})
