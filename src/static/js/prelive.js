@@ -1,5 +1,7 @@
 /* ============================================================
    AREA_303 — Pre-live Planner Logic
+   Includes interactive SKU filters, HeroScore ranking,
+   smart combo bundling, voucher knapsack, and livestream time picker.
    ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -18,20 +20,42 @@ document.addEventListener("DOMContentLoaded", () => {
     search: "",
   };
 
+  // Timeslot State
+  let selectedDate = new Date().toISOString().split("T")[0];
+  let selectedStartTime = "20:00";
+  let selectedEndTime = "22:00";
+
   // Elements
   const loadingEl = document.getElementById("loading-state");
   const mainContentEl = document.getElementById("main-content");
   const skuTableBody = document.getElementById("sku-table-body");
-  const timeslotBadge = document.getElementById("timeslot-badge");
-  const timeslotReason = document.getElementById("timeslot-reason");
   const combosContainer = document.getElementById("combos-container");
   const vouchersContainer = document.getElementById("vouchers-container");
+
+  // Timeslot Elements
+  const liveDateInput = document.getElementById("live-date");
+  const liveStartTimeInput = document.getElementById("live-start-time");
+  const liveEndTimeInput = document.getElementById("live-end-time");
+  const liveDurationBadge = document.getElementById("live-duration-badge");
+  const timeslotReasonEl = document.getElementById("timeslot-reason");
+  const peakHourLabel = document.getElementById("peak-hour-label");
+  const heatmapBarsContainer = document.getElementById("heatmap-bars");
+  const presetAiRecBtn = document.getElementById("preset-ai-rec");
 
   // KPI Elements
   const statSkus = document.getElementById("stat-skus");
   const statLift = document.getElementById("stat-lift");
   const statBudgetUsed = document.getElementById("stat-budget-used");
   const statSelectedCount = document.getElementById("selected-sku-count");
+
+  // Initialize Date Input
+  if (liveDateInput) {
+    liveDateInput.value = selectedDate;
+    liveDateInput.min = selectedDate;
+    liveDateInput.addEventListener("change", (e) => {
+      selectedDate = e.target.value;
+    });
+  }
 
   // Fetch pipeline recommendation
   async function loadPipeline(customBudget = null) {
@@ -62,6 +86,20 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedComboIds.clear();
         (pipelineData.m4_combos || []).slice(0, 2).forEach(c => selectedComboIds.add(c.combo_id));
 
+        // Set initial timeslot from AI Recommendation
+        const m3 = pipelineData.m3_timeslot || {};
+        if (m3.start_hour !== undefined && m3.end_hour !== undefined) {
+          selectedStartTime = `${m3.start_hour.toString().padStart(2, "0")}:00`;
+          selectedEndTime = `${m3.end_hour.toString().padStart(2, "0")}:00`;
+          if (liveStartTimeInput) liveStartTimeInput.value = selectedStartTime;
+          if (liveEndTimeInput) liveEndTimeInput.value = selectedEndTime;
+          if (presetAiRecBtn) {
+            presetAiRecBtn.textContent = `⭐ AI Gợi Ý (${selectedStartTime}–${selectedEndTime})`;
+            presetAiRecBtn.setAttribute("data-start", selectedStartTime);
+            presetAiRecBtn.setAttribute("data-end", selectedEndTime);
+          }
+        }
+
         renderUI();
       } else {
         AREA303.toast("Lỗi tải dữ liệu: " + res.message, "error");
@@ -77,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderUI() {
     renderKPIs();
-    renderTimeslot();
+    renderTimeslotSection();
     renderSkusTable();
     renderCombos();
     renderVouchers();
@@ -91,11 +129,131 @@ document.addEventListener("DOMContentLoaded", () => {
     if (statSelectedCount) statSelectedCount.textContent = selectedSkuIds.size;
   }
 
-  function renderTimeslot() {
-    const ts = pipelineData.m3_timeslot || {};
-    if (timeslotBadge) timeslotBadge.textContent = ts.recommended_slot || "20:00 – 22:00";
-    if (timeslotReason) timeslotReason.textContent = ts.reason || "";
+  /* ---------- Timeslot Rendering & Interactions ---------- */
+
+  function parseMinutes(timeStr) {
+    const parts = (timeStr || "00:00").split(":");
+    return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
   }
+
+  function updateDuration() {
+    const startMins = parseMinutes(selectedStartTime);
+    let endMins = parseMinutes(selectedEndTime);
+    if (endMins <= startMins) {
+      endMins += 24 * 60; // next day crossing
+    }
+    const diff = endMins - startMins;
+    const hrs = Math.floor(diff / 60);
+    const mins = diff % 60;
+
+    if (liveDurationBadge) {
+      liveDurationBadge.textContent = `Thời lượng: ${hrs}h ${mins.toString().padStart(2, "0")}m`;
+    }
+  }
+
+  function renderTimeslotSection() {
+    const ts = pipelineData?.m3_timeslot || {};
+    if (timeslotReasonEl) timeslotReasonEl.textContent = ts.reason || "Khung giờ vàng dựa trên tín hiệu livestream ngành.";
+    if (peakHourLabel && ts.evidence?.peak_hour !== undefined) {
+      peakHourLabel.textContent = `Đỉnh cao điểm: ${ts.evidence.peak_hour}:00`;
+    }
+
+    updateDuration();
+    renderHeatmap();
+  }
+
+  function renderHeatmap() {
+    if (!heatmapBarsContainer || !pipelineData?.m3_timeslot?.evidence) return;
+    heatmapBarsContainer.innerHTML = "";
+
+    const dist = pipelineData.m3_timeslot.evidence.hour_distribution || [];
+    const maxVal = Math.max(...dist, 1);
+
+    const startH = parseInt(selectedStartTime.split(":")[0], 10);
+    const endH = parseInt(selectedEndTime.split(":")[0], 10);
+
+    for (let h = 0; h < 24; h++) {
+      const count = dist[h] || 0;
+      const heightPct = Math.max(12, Math.round((count / maxVal) * 100));
+
+      const isSelected = (endH > startH) ? (h >= startH && h < endH) : (h >= startH || h < endH);
+
+      const bar = document.createElement("div");
+      bar.style.flex = "1";
+      bar.style.height = `${heightPct}%`;
+      bar.style.borderRadius = "2px 2px 0 0";
+      bar.style.cursor = "pointer";
+      bar.style.transition = "all 0.15s ease";
+      bar.title = `${h}:00 - ${h + 1}:00 (${count} voucher ngành)`;
+
+      if (isSelected) {
+        bar.style.background = "var(--brand-accent)";
+        bar.style.boxShadow = "0 0 4px rgba(2, 132, 199, 0.4)";
+      } else {
+        bar.style.background = count > 0 ? "#cbd5e1" : "#e2e8f0";
+      }
+
+      bar.addEventListener("mouseenter", () => {
+        if (!isSelected) bar.style.background = "#94a3b8";
+      });
+      bar.addEventListener("mouseleave", () => {
+        if (!isSelected) bar.style.background = count > 0 ? "#cbd5e1" : "#e2e8f0";
+      });
+
+      bar.addEventListener("click", () => {
+        // Set 2-hour window starting from clicked hour
+        const newStartH = h;
+        const newEndH = (h + 2) % 24;
+        selectedStartTime = `${newStartH.toString().padStart(2, "0")}:00`;
+        selectedEndTime = `${newEndH.toString().padStart(2, "0")}:00`;
+        if (liveStartTimeInput) liveStartTimeInput.value = selectedStartTime;
+        if (liveEndTimeInput) liveEndTimeInput.value = selectedEndTime;
+
+        document.querySelectorAll(".slot-preset-btn").forEach(b => b.classList.remove("active"));
+        updateDuration();
+        renderHeatmap();
+      });
+
+      heatmapBarsContainer.appendChild(bar);
+    }
+  }
+
+  // Preset Buttons Event Handlers
+  document.querySelectorAll(".slot-preset-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      document.querySelectorAll(".slot-preset-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      selectedStartTime = btn.getAttribute("data-start");
+      selectedEndTime = btn.getAttribute("data-end");
+      if (liveStartTimeInput) liveStartTimeInput.value = selectedStartTime;
+      if (liveEndTimeInput) liveEndTimeInput.value = selectedEndTime;
+
+      updateDuration();
+      renderHeatmap();
+    });
+  });
+
+  // Time Inputs Handlers
+  if (liveStartTimeInput) {
+    liveStartTimeInput.addEventListener("change", (e) => {
+      selectedStartTime = e.target.value;
+      document.querySelectorAll(".slot-preset-btn").forEach(b => b.classList.remove("active"));
+      updateDuration();
+      renderHeatmap();
+    });
+  }
+
+  if (liveEndTimeInput) {
+    liveEndTimeInput.addEventListener("change", (e) => {
+      selectedEndTime = e.target.value;
+      document.querySelectorAll(".slot-preset-btn").forEach(b => b.classList.remove("active"));
+      updateDuration();
+      renderHeatmap();
+    });
+  }
+
+  /* ---------- SKUs Table Rendering ---------- */
 
   function renderSkusTable() {
     if (!skuTableBody) return;
@@ -111,7 +269,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return true;
     });
 
-    // M1 map lookup
     const m1Map = {};
     (pipelineData.m1_pricing.items || []).forEach(p => { m1Map[p.item_id] = p; });
 
@@ -150,7 +307,6 @@ document.addEventListener("DOMContentLoaded", () => {
       skuTableBody.appendChild(tr);
     });
 
-    // Checkbox events
     document.querySelectorAll(".sku-checkbox").forEach(cb => {
       cb.addEventListener("change", (e) => {
         const id = e.target.getAttribute("data-id");
@@ -160,6 +316,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   }
+
+  /* ---------- Combos & Vouchers Rendering ---------- */
 
   function renderCombos() {
     if (!combosContainer || !pipelineData) return;
@@ -282,9 +440,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const selectedSkus = allSkus.filter(s => selectedSkuIds.has(s.item_id));
       const selectedCombos = (pipelineData.m4_combos || []).filter(c => selectedComboIds.has(c.combo_id));
 
+      const startMins = parseMinutes(selectedStartTime);
+      let endMins = parseMinutes(selectedEndTime);
+      if (endMins <= startMins) endMins += 24 * 60;
+      const durationMins = endMins - startMins;
+
       const playbookPayload = {
         shop_id: shopId,
-        slot: pipelineData.m3_timeslot?.recommended_slot || "20:00 – 22:00",
+        live_date: selectedDate,
+        start_time: selectedStartTime,
+        end_time: selectedEndTime,
+        slot: `${selectedStartTime} – ${selectedEndTime}`,
+        duration_mins: durationMins,
         items: selectedSkus,
         combos: selectedCombos,
         vouchers: pipelineData.m5_voucher?.sku_allocations || [],

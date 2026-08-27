@@ -45,6 +45,12 @@ document.addEventListener("DOMContentLoaded", () => {
         draftPlaybook = draftResp.draft;
         ordersList = ordersResp.orders || [];
 
+        const slotBadgeEl = document.getElementById("postlive-slot-badge");
+        if (slotBadgeEl) {
+          const dtStr = draftPlaybook.live_date ? `${draftPlaybook.live_date} · ` : "";
+          slotBadgeEl.textContent = `Khung giờ: ${dtStr}${draftPlaybook.slot || "20:00 – 22:00"}`;
+        }
+
         if (emptyStateEl) emptyStateEl.style.display = "none";
         if (mainContentEl) mainContentEl.style.display = "block";
 

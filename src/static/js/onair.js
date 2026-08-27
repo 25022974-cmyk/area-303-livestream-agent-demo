@@ -37,6 +37,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (res.status === "ok" && res.draft && res.draft.items && res.draft.items.length > 0) {
         draftPlaybook = res.draft;
         buildRunOfShow(draftPlaybook);
+        const slotInfoEl = document.getElementById("onair-slot-info");
+        if (slotInfoEl) {
+          const dtStr = draftPlaybook.live_date ? `${draftPlaybook.live_date} · ` : "";
+          slotInfoEl.textContent = `${dtStr}${draftPlaybook.slot || "20:00 – 22:00"}`;
+        }
         if (emptyStateEl) emptyStateEl.style.display = "none";
         if (activeShowEl) activeShowEl.style.display = "grid";
         loadExistingOrders();

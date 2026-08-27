@@ -38,11 +38,13 @@
   <div style="display: flex; flex-direction: column; gap: 1rem;">
     
     <!-- Top Live Control Bar -->
-    <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem;">
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; flex-wrap: wrap; gap: 0.75rem;">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
         <span class="live-dot"></span>
         <div>
-          <div style="font-size: 0.6875rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Thời gian phát sóng:</div>
+          <div style="font-size: 0.6875rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">
+            Khung Giờ: <span id="onair-slot-info" style="color: var(--brand-accent); font-weight: 800;">20:00 – 22:00</span>
+          </div>
           <div id="live-timer" style="font-size: 1.25rem; font-weight: 800; font-family: monospace; color: var(--danger);">00:00</div>
         </div>
       </div>
