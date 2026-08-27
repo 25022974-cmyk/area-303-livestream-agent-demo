@@ -1,0 +1,92 @@
+<!--
+  Copyright (C) 2026 Nguyen The Viet, Vu Thi Mai Anh, Do Huu An Phu, Phan Thuy Tram
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}AREA_303 · AI Livestream Strategist{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script>
+    window.__SHOP_ID__ = "{{ shop_id }}";
+  </script>
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div style="display: flex; align-items: center; gap: 0.875rem;">
+        <a href="{{ url_for('ui.index', shop_id=shop_id) }}" class="brand-badge" title="AREA_303 AI Strategist">A3</a>
+        <div>
+          <div style="font-weight: 800; font-size: 1.0625rem; line-height: 1.1; color: var(--text);">
+            AREA_303 <span style="font-size: 0.6875rem; font-weight: 600; color: var(--muted); vertical-align: middle; margin-left: 4px;">AI Livestream Strategist</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">
+            <select class="form-select" style="padding: 2px 6px; font-size: 0.75rem; font-weight: 600; width: auto; display: inline-block;" onchange="AREA303.switchShop(this.value)">
+              {% for s in shops %}
+                <option value="{{ s.shop_id }}" {% if s.shop_id == shop_id %}selected{% endif %}>
+                  {{ s.shop_name }} ({{ s.shop_id }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3-Stage Progress Breadcrumb -->
+      <nav class="progress-tracker">
+        <a href="{{ url_for('ui.prelive', shop_id=shop_id) }}" class="step-node {% if current_stage == 'prelive' %}active{% elif current_stage in ['onair', 'postlive'] %}completed{% endif %}">
+          <span class="step-dot"></span>
+          <span>1 · Pre-live</span>
+        </a>
+        <div class="step-divider {% if current_stage in ['onair', 'postlive'] %}completed{% endif %}"></div>
+        <a href="{{ url_for('ui.onair', shop_id=shop_id) }}" class="step-node {% if current_stage == 'onair' %}active{% elif current_stage == 'postlive' %}completed{% endif %}">
+          <span class="step-dot"></span>
+          <span>2 · On-air</span>
+        </a>
+        <div class="step-divider {% if current_stage == 'postlive' %}completed{% endif %}"></div>
+        <a href="{{ url_for('ui.postlive', shop_id=shop_id) }}" class="step-node {% if current_stage == 'postlive' %}active{% endif %}">
+          <span class="step-dot"></span>
+          <span>3 · Post-live</span>
+        </a>
+      </nav>
+
+      <div>
+        <a href="{{ url_for('ui.prelive', shop_id=shop_id) }}" class="btn btn-primary btn-sm">
+          + Lập Phiên Live Mới
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main style="max-width: 80rem; margin: 0 auto; padding: 1.5rem 1.25rem;">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Global Toasts Container -->
+  <div id="toast-container"></div>
+
+  <!-- Footer -->
+  <footer style="max-width: 80rem; margin: 2rem auto 1.5rem auto; padding: 1rem 1.25rem; text-align: center; font-size: 0.75rem; color: var(--muted); border-top: 1px solid var(--line);">
+    AREA_303 · AI Livestream Strategist Decision Engine · ST5K Team (Nguyen The Viet, Vu Thi Mai Anh, Do Huu An Phu, Phan Thuy Tram) · GPLv3 License
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

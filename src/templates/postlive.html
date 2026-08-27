@@ -1,0 +1,159 @@
+<!--
+  Copyright (C) 2026 Nguyen The Viet, Vu Thi Mai Anh, Do Huu An Phu, Phan Thuy Tram
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+{% extends "base.html" %}
+
+{% block title %}Post-live Review · AREA_303{% endblock %}
+
+{% block content %}
+<!-- Empty State (No Completed Live) -->
+<div id="postlive-empty-state" class="card" style="display: none; text-align: center; padding: 3rem 1.5rem;">
+  <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📋</div>
+  <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem;">Chưa Có Dữ Liệu Phiên Live Hoàn Tất</h2>
+  <p style="font-size: 0.8125rem; color: var(--muted); max-width: 28rem; margin: 0 auto 1.25rem auto;">
+    Hãy chạy một phiên live qua các bước: Pre-live Planner → On-air Assistant → Kết thúc phiên. Kết quả sẽ được tổng hợp tự động tại đây.
+  </p>
+  <a href="{{ url_for('ui.prelive', shop_id=shop_id) }}" class="btn btn-primary">
+    ← Lập Phiên Live Tại Pre-live Planner
+  </a>
+</div>
+
+<!-- Main Post-live Review Content -->
+<div id="postlive-content" style="display: none; flex-direction: column; gap: 1.5rem;">
+
+  <!-- Section 1: KPI Overview -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">SKU Đã Lên Sóng</div>
+      <div id="postlive-stat-skus" class="stat-val">-</div>
+      <div class="stat-sub">Số sản phẩm trong show</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tổng Đơn Hàng</div>
+      <div id="postlive-stat-orders" class="stat-val" style="color: var(--brand-accent);">-</div>
+      <div class="stat-sub">Ghi nhận từ On-air</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tổng GMV Thực Tế</div>
+      <div id="postlive-stat-gmv" class="stat-val" style="color: var(--ok);">-</div>
+      <div class="stat-sub">Doanh thu đạt được</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Giá Trị Đơn Trung Bình (AOV)</div>
+      <div id="postlive-stat-aov" class="stat-val" style="color: var(--purple);">-</div>
+      <div class="stat-sub">= GMV / Tổng đơn</div>
+    </div>
+  </div>
+
+  <!-- Section 2: Per-SKU Performance Table -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <h2 class="section-h">
+        <span class="step-badge">1</span> Kết Quả Chi Tiết Theo Từng SKU
+      </h2>
+      <div style="font-size: 0.75rem; color: var(--muted);">
+        Bạn có thể chỉnh sửa số đơn thực tế trực tiếp trong bảng trước khi huấn luyện lại model.
+      </div>
+    </div>
+
+    <div class="table-wrapper" style="max-height: 340px; overflow-y: auto;">
+      <table class="data-table">
+        <thead style="position: sticky; top: 0; z-index: 10;">
+          <tr>
+            <th>Sản Phẩm</th>
+            <th>Giá Bán</th>
+            <th>Hero Score</th>
+            <th>Dự Đoán (M5)</th>
+            <th>Thực Tế (Đơn)</th>
+            <th>Độ Lệch</th>
+            <th style="text-align: right;">Doanh Thu Thực</th>
+          </tr>
+        </thead>
+        <tbody id="postlive-sku-table-body">
+          <!-- Rendered via postlive.js -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Section 3: Online Learner Loop Panel -->
+  <div class="card" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 2px solid var(--purple-border);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+      <div>
+        <h2 class="section-h" style="color: var(--purple);">
+          <span class="step-badge" style="background: var(--purple);">2</span> Vòng Lặp Học Máy Tự Động (Online Learner Loop)
+        </h2>
+        <p style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">
+          AI tự động cập nhật trọng số độ nhạy giá (α), rào cản voucher (β) và độ co giãn theo sai số thực tế (MAPE).
+        </p>
+      </div>
+      <button id="btn-submit-feedback" class="btn btn-primary btn-sm" style="background: var(--purple);">
+        ⚡ Cập Nhật Model Cho Phiên Sau
+      </button>
+    </div>
+
+    <!-- Learner Metrics Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem;">
+      <div class="stat-card" style="background: #ffffff;">
+        <div class="stat-label">Hệ Số Alpha (α)</div>
+        <div id="learner-alpha" class="stat-val" style="font-size: 1.25rem; color: var(--brand-accent);">0.50</div>
+        <div class="stat-sub">Độ nhạy mức giảm giá</div>
+      </div>
+      <div class="stat-card" style="background: #ffffff;">
+        <div class="stat-label">Hệ Số Beta (β)</div>
+        <div id="learner-beta" class="stat-val" style="font-size: 1.25rem; color: var(--purple);">0.20</div>
+        <div class="stat-sub">Rào cản đơn tối thiểu</div>
+      </div>
+      <div class="stat-card" style="background: #ffffff;">
+        <div class="stat-label">Sai Số Dự Báo (MAPE)</div>
+        <div id="learner-mape" class="stat-val" style="font-size: 1.25rem; color: var(--warn);">0.0%</div>
+        <div class="stat-sub">Mean Absolute % Error</div>
+      </div>
+      <div class="stat-card" style="background: #ffffff;">
+        <div class="stat-label">Số Phiên Đã Học</div>
+        <div id="learner-sessions" class="stat-val" style="font-size: 1.25rem; color: var(--text);">0</div>
+        <div class="stat-sub">Lịch sử tích luỹ</div>
+      </div>
+    </div>
+
+    <!-- History Table -->
+    <div>
+      <div style="font-weight: 700; font-size: 0.8125rem; color: var(--text); margin-bottom: 0.5rem;">Lịch Sử Cập Nhật Học Máy Qua Các Phiên:</div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Session ID</th>
+              <th>Ngày</th>
+              <th>Sai Số MAPE</th>
+              <th>Alpha (α) Mới</th>
+              <th>Beta (β) Mới</th>
+            </tr>
+          </thead>
+          <tbody id="learner-history-body">
+            <!-- Rendered via postlive.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/postlive.js') }}"></script>
+{% endblock %}
