@@ -1,0 +1,11 @@
+services:
+  area303:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./shops:/app/server/shops
+    environment:
+      - PYTHONUNBUFFERED=1

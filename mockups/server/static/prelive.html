@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pre-live Planner · AREA_303</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body class="min-h-full" x-data="prelive()" x-init="init()" x-cloak>
+  <!-- Top bar -->
+  <header class="border-b bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+      <a href="index.html" class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold" style="background:var(--brand)">A3</a>
+      <div class="flex-1 min-w-0">
+        <div class="font-extrabold leading-none">Pre-live Planner</div>
+        <div class="text-xs muted truncate">Bibica Official Store · 213989179</div>
+      </div>
+      <!-- progress -->
+      <div class="progress hidden md:flex">
+        <div class="seg active"><span class="dot"></span><span>1 · Pre</span></div>
+        <div class="bar"></div>
+        <div class="seg"><span class="dot"></span><span>2 · On-air</span></div>
+        <div class="bar"></div>
+        <div class="seg"><span class="dot"></span><span>3 · Post</span></div>
+      </div>
+      <button class="btn btn-ghost" @click="resetDraft()">↺ Reset</button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+
+    <!-- ===== SECTION 1 — SKU (M2: HeroScore) ===== -->
+    <section class="card p-4" data-anchor>
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div class="section-h"><span class="step">1</span> Chọn SKU lên live <span class="muted text-xs font-normal">(M2 · HeroScore)</span></div>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <label class="muted">Bộ lọc:</label>
+          <select class="inp !py-1.5 !w-auto" x-model="f.line">
+            <option value="">Tất cả dòng</option>
+            <option>Zoo</option><option>Quasure</option><option>Gooka</option>
+            <option>Sumika</option><option>Hura</option><option>Other</option>
+          </select>
+          <select class="inp !py-1.5 !w-auto" x-model="f.gift">
+            <option value="">Tất cả SKU</option>
+            <option value="hide">Ẩn quà tặng</option>
+            <option value="only">Chỉ quà tặng</option>
+          </select>
+          <input type="number" placeholder="Giá ≤ (k)" class="inp !py-1.5 !w-24" x-model.number="f.maxPrice" @input="">
+          <label class="flex items-center gap-1"><input type="checkbox" x-model="f.heronly"> Chỉ score ≥
+            <input type="number" class="inp !py-1 !w-14" x-model.number="f.minScore" step="0.05">
+          </label>
+          <button class="btn btn-primary" @click="autoPick(10)">⭐ Tự chọn top 10</button>
+        </div>
+      </div>
+
+      <div class="scroll">
+        <table class="sku">
+          <thead>
+            <tr>
+              <th></th>
+              <th>SKU</th>
+              <th>Dòng</th>
+              <th>HeroScore</th>
+              <th>Giá</th>
+              <th>Giá gốc</th>
+              <th>-%</th>
+              <th class="mono">Sold/tháng</th>
+              <th class="mono">RC</th>
+              <th>Voucher</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="i in filtered()" :key="i.item_id">
+              <tr :class="selectedIds.includes(i.item_id) && 'bg-[var(--brand-soft)]'">
+                <td><input type="checkbox" :checked="selectedIds.includes(i.item_id)" @change="toggle(i.item_id)"></td>
+                <td>
+                  <div class="font-semibold max-w-[260px] truncate" x-text="i.name" :title="i.name"></div>
+                  <div class="text-[11px] muted mono" x-text="i.item_id"></div>
+                </td>
+                <td><span class="tag" :class="lineTag(i.line)" x-text="i.line"></span></td>
+                <td>
+                  <div class="score">
+                    <span class="mono" x-text="i.hero_score.toFixed(2)"></span>
+                    <span class="score bar"><i :style="`width:${Math.round(i.hero_score*100)}%`"></i></span>
+                  </div>
+                </td>
+                <td class="mono" x-text="AREA303.vnd(i.price)"></td>
+                <td class="mono muted" x-text="AREA303.vnd(i.orig)"></td>
+                <td class="mono" :class="i.disc_pct>=40 && 'text-[var(--danger)] font-bold'" x-text="AREA303.pct(i.disc_pct)"></td>
+                <td class="mono" x-text="num(i.ms)"></td>
+                <td class="mono" x-text="num(i.rc)"></td>
+                <td class="mono text-[11px]" x-text="i.voucher ? ('−'+AREA303.vnd(i.v_disc)) : '—'" :title="i.voucher"></td>
+                <td>
+                  <span x-show="i.sold_out" class="tag tag-soldout">hết hàng</span>
+                  <span x-show="i.margin_unsafe && !i.sold_out" class="tag tag-clear">⚠ margin</span>
+                  <span x-show="i.slow_mover && !i.sold_out" class="tag tag-clear">slow</span>
+                  <span x-show="!i.sold_out && !i.slow_mover && !i.margin_unsafe" class="muted text-[11px]">—</span>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+      <div class="text-xs muted mt-2 flex items-center gap-3">
+        <span x-text="`Đã chọn ${selectedIds.length} SKU`"></span>·
+        <span x-text="`Hiển thị ${filtered().length}/${items.length}`"></span>
+      </div>
+    </section>
+
+    <!-- ===== SECTION 2 — Khung giờ (M3) ===== -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div class="section-h"><span class="step">2</span> Khung giờ live <span class="muted text-xs font-normal">(M3 · TimeSlot)</span></div>
+        <div class="text-xs muted">Heatmap theo mô phỏng prior từ playbook + rule giờ vàng Shopee VN.</div>
+      </div>
+      <div class="grid lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 scroll !max-h-[360px]">
+          <table class="hm" x-html="heatmapHTML()"></table>
+        </div>
+        <div class="space-y-3">
+          <div class="muted text-xs font-semibold">Khung giờ đề xuất</div>
+          <template x-for="s in slotsSuggested" :key="s.label">
+            <label class="card p-3 block cursor-pointer" :class="draft.slot===s.label && 'ring-2'" style="ring-color:var(--brand)">
+              <div class="flex items-center gap-2">
+                <input type="radio" :value="s.label" x-model="draft.slot" @change="save()">
+                <div class="font-bold" x-text="s.label"></div>
+              </div>
+              <div class="text-xs muted mt-1" x-text="s.why"></div>
+              <div class="mt-1"><span class="tag" :class="s.tone==='primary'?'tag-hook':'tag-core'" x-text="s.tone==='primary'?'Khung chính':'Dự phòng'"></span></div>
+            </label>
+          </template>
+          <div class="text-xs muted">Khuyến nghị playbook: <code x-text="playbook?.recommended_window || 'T5 20:00–21:30'"></code></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SECTION 3 — Combo (M4) ===== -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div class="section-h"><span class="step">3</span> Tạo combo <span class="muted text-xs font-normal">(M4 · Combo)</span></div>
+        <button class="btn btn-ghost" @click="suggestCombo()" :disabled="selectedIds.length<2">Gợi ý combo từ SKU đã chọn</button>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-3">
+        <template x-for="(c,idx) in draft.combo" :key="idx">
+          <div class="card p-3 relative">
+            <button class="absolute top-2 right-2 text-xs muted hover:text-[var(--danger)]" @click="draft.combo.splice(idx,1); save()">✕</button>
+            <div class="text-[11px] muted uppercase font-bold" x-text="c.role"></div>
+            <div class="font-semibold text-sm mt-1" x-text="c.name"></div>
+            <div class="text-xs mono muted" x-text="AREA303.vnd(c.price)"></div>
+          </div>
+        </template>
+        <template x-if="!draft.combo.length">
+          <div class="muted text-sm">Chọn ≥2 SKU ở Section 1 rồi bấm “Gợi ý combo” — hệ thống ghép cross-category (kẹo + bánh).</div>
+        </template>
+      </div>
+      <template x-if="draft.combo.length">
+        <div class="mt-3 flex flex-wrap gap-4 text-sm">
+          <span>Giá combo: <b class="mono" x-text="AREA303.vnd(comboTotal())"></b></span>
+          <span class="muted">Tiết kiệm ≈ <b class="mono" x-text="AREA303.pct(comboSavingPct())"></b> (gộp −15% theo grid bundle)</span>
+        </div>
+      </template>
+    </section>
+
+    <!-- ===== SECTION 4 — Voucher ngân sách (M5) ===== -->
+    <section class="card p-4">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div class="section-h"><span class="step">4</span> Voucher & ngân sách <span class="muted text-xs font-normal">(M5 · Knapsack)</span></div>
+        <button class="btn btn-ghost" @click="draft.budget=500000000; save()">Dùng mặc định (~500M ₫)</button>
+      </div>
+      <div class="grid lg:grid-cols-3 gap-4">
+        <div class="space-y-2">
+          <label class="text-xs font-semibold">Tổng ngân sách voucher / tháng (VND)</label>
+          <input type="number" class="inp" x-model.number="draft.budget" min="0" step="1000000" @input="save()">
+          <label class="text-xs font-semibold mt-2 block">Mức giảm single tối đa (VND) <span class="muted">(tùy chọn)</span></label>
+          <input type="number" class="inp" x-model.number="draft.maxSingle" min="0" step="5000" placeholder="vd 40000" @input="save()">
+          <label class="text-xs font-semibold mt-2 block">Số voucher tối đa</label>
+          <input type="number" class="inp" x-model.number="draft.maxN" min="0" placeholder="không giới hạn" @input="save()">
+          <button class="btn btn-primary mt-3" @click="runVoucher()">Tính lại →</button>
+        </div>
+        <div class="lg:col-span-2">
+          <div class="grid grid-cols-3 gap-2 mb-3">
+            <div class="stat"><div class="k">Ngân sách</div><div class="v" x-text="AREA303.vnd(voucherResult.budget)"></div></div>
+            <div class="stat"><div class="k">Đã dùng</div><div class="v" x-text="AREA303.vnd(voucherResult.used)"></div><div class="sub" x-text="'còn '+AREA303.vnd(voucherResult.remaining)"></div></div>
+            <div class="stat"><div class="k">SKU chọn</div><div class="v" x-text="num(voucherResult.n_selected)"></div><div class="sub" x-text="'est sales ' + (voucherResult.total_est_sales||0).toFixed(0)"></div></div>
+          </div>
+          <div class="scroll !max-h-[260px]">
+            <table class="sku">
+              <thead><tr><th>SKU</th><th>disc%</th><th>Giá</th><th>Voucher</th><th>Min spend</th><th class="mono">est sales</th><th class="mono">vcost</th></tr></thead>
+              <tbody>
+                <template x-for="s in voucherResult.selected||[]" :key="s.item_id">
+                  <tr>
+                    <td><div class="font-semibold max-w-[220px] truncate" x-text="s.name" :title="s.name"></div><div class="text-[11px] muted mono" x-text="s.item_id"></div></td>
+                    <td class="mono" x-text="AREA303.pct(s.disc_pct)"></td>
+                    <td class="mono" x-text="AREA303.vnd(s.price)"></td>
+                    <td class="mono" x-text="'−'+AREA303.vnd(s.voucher_disc)"></td>
+                    <td class="mono" x-text="AREA303.vnd(s.min_spend)"></td>
+                    <td class="mono" x-text="num(s.est_sales)"></td>
+                    <td class="mono" x-text="AREA303.vnd(s.vcost)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <div class="text-[11px] muted mt-1">est_sales = ms · (1 + α·B/orig − β·min_spend/2e5); α=0.5, β=0.2 (theo bibica_methods).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <div class="card p-4 flex items-center justify-between flex-wrap gap-3">
+      <div class="text-sm">
+        <span class="muted">Playbook sẽ dùng </span><b x-text="selectedIds.length"></b><span class="muted"> SKU · khung </span><b x-text="draft.slot || '—'"></b><span class="muted"> · combo </span><b x-text="draft.combo.length"></b><span class="muted"> · ngân sách </span><b x-text="AREA303.vnd(draft.budget)"></b>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost" @click="save()">Lưu playbook (draft)</button>
+        <a class="btn btn-primary" :href="'onair.html'" @click.prevent="save(); location='onair.html'">Tạo playbook & sang On-air →</a>
+      </div>
+    </div>
+    <div class="text-[11px] muted pb-4">Draft lưu ở localStorage trình duyệt. Model chạy thật nằm ở <code>model_bibica/modules/</code> — UI này dựng kịch bản học (draft) để demo.</div>
+  </main>
+
+  <script src="static/js/data.js"></script>
+  <script src="static/js/app.js"></script>
+  <script src="static/js/prelive.js"></script>
+</body>
+</html>

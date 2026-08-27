@@ -1,0 +1,181 @@
+/* ============================================================
+   AREA_303 — AI Livestream Strategist · Styles chung
+   Tailwind (CDN) làm nền; file này chỉ giữ override tùy biến,
+   component, và các tiện ích Tailwind không có sẵn.
+   ============================================================ */
+
+/* Ẩn nội dung đến khi Alpine init xong (tránh flash / trang trắng khi đổi trang) */
+[x-cloak] { display: none !important; }
+
+:root {
+  --brand: #2b4257;        /* navy - màu thương hiệu chính (ùng chart P1.py) */
+  --brand-2: #0ea5e9;     /* accent cyan */
+  --brand-soft: #2b425714;
+  --danger: #d90429;
+  --warn:   #f59e0b;
+  --ok:     #16a34a;
+  --muted:  #6b7280;
+  --line:   #e5e7eb;
+  --bg:     #f7f8fa;
+}
+
+.dark {
+  --bg: #0f172a;
+  --line: #1f2937;
+  --muted:#94a3b8;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: #111827;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Inter", sans-serif;
+}
+
+/* Card */
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 18px -10px rgba(0,0,0,.18);
+}
+.dark .card { background: #111827; border-color: var(--line); }
+
+/* Section heading */
+.section-h {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: 15px; color: var(--brand);
+  letter-spacing: .01em;
+}
+.section-h .step {
+  width: 22px; height: 22px; border-radius: 999px;
+  background: var(--brand); color: #fff; font-size: 12px;
+  display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
+}
+
+/* Breadcrumb / progress (Pre → On-air → Post) */
+.progress {
+  display: flex; align-items: center; gap: 0; padding: 4px 0;
+}
+.progress .seg {
+  display: flex; align-items: center; gap: 8px; color: var(--muted);
+  font-size: 13px; font-weight: 600; padding: 6px 12px; flex: 0 0 auto;
+}
+.progress .seg.active { color: var(--brand); }
+.progress .seg.done { color: var(--ok); }
+.progress .dot { width: 10px; height: 10px; border-radius: 999px; background: var(--line); }
+.progress .seg.active .dot { background: var(--brand); }
+.progress .seg.done .dot { background: var(--ok); }
+.progress .bar { flex: 1 1 auto; height: 2px; background: var(--line); margin: 0 4px; }
+.progress .bar.done { background: var(--ok); }
+
+/* SKU table */
+table.sku {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  font-size: 13px;
+}
+table.sku thead th {
+  position: sticky; top: 0; background: #f1f5f9; color: var(--brand);
+  text-align: left; padding: 8px 10px; font-weight: 700; font-size: 12px;
+  border-bottom: 1px solid var(--line); white-space: nowrap; z-index: 1;
+}
+.dark table.sku thead th { background: #0b1220; }
+table.sku tbody td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+table.sku tbody tr:hover { background: #f9fafb; }
+.dark table.sku tbody tr:hover { background: #16213a; }
+
+/* Hero score pill */
+.score {
+  display: inline-flex; align-items: center; gap: 6px; font-weight: 700;
+}
+.score.bar { width: 48px; height: 6px; background: var(--line); border-radius: 6px; overflow: hidden; }
+.score.bar > i { display:block; height: 100%; background: var(--brand); }
+
+/* Tag */
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; line-height: 1.6; white-space: nowrap;
+}
+.tag-hook { background:#dbeafe; color:#1e3a8a; }
+.tag-core { background:#dcfce7; color:#14532d; }
+.tag-bundle{ background:#fae8ff; color:#701a75; }
+.tag-clear { background:#fee2e2; color:#7f1d1d; }
+.tag-soldout{ background:#f3f4f6; color:#6b7280; }
+.dark .tag-hook { background:#1e3a8a55; color:#bfdbfe; }
+.dark .tag-core { background:#14532d55; color:#bbf7d0; }
+.dark .tag-bundle{ background:#701a7555; color:#f5d0fe; }
+.dark .tag-clear { background:#7f1d1d55; color:#fecaca; }
+.dark .tag-soldout{ background:#37415155; color:#d1d5db; }
+
+/* Timeline (On-air run-of-show) */
+.timeline { position: relative; }
+.timeline .slot {
+  border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+  background: #fff; cursor: pointer; transition: border-color .12s, box-shadow .12s;
+}
+.dark .timeline .slot { background: #111827; }
+.timeline .slot.active {
+  border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft);
+}
+.timeline .slot.done { opacity: .62; }
+.timeline .slot .num {
+  width: 26px; height: 26px; border-radius: 999px; background: var(--brand);
+  color:#fff; font-weight:700; font-size:13px; display:inline-flex;
+  align-items:center; justify-content:center; flex:0 0 auto;
+}
+.timeline .slot.done .num { background: var(--ok); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+  border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer;
+  border: 1px solid transparent; transition: filter .12s, background .12s;
+}
+.btn:hover { filter: brightness(.97); }
+.btn-primary { background: var(--brand); color:#fff; }
+.btn-ghost { background: #fff; border-color: var(--line); color:#374151; }
+.btn-ghost:hover { background:#f9fafb; }
+.dark .btn-ghost { background:#111827; color:#e5e7eb; }
+.btn-danger { background: var(--danger); color:#fff; }
+.btn-ok { background: var(--ok); color:#fff; }
+.btn[disabled] { opacity:.5; cursor: not-allowed; filter: none; }
+
+/* Input */
+.inp {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px;
+  font-size: 13px; background: #fff; color:#111827;
+}
+.dark .inp { background:#0b1220; color:#e5e7eb; border-color:var(--line); }
+.inp:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+
+/* Stat tile */
+.stat {
+  background:#fff; border:1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+}
+.dark .stat { background:#111827; }
+.stat .k { font-size:12px; color: var(--muted); font-weight:600; }
+.stat .v { font-size: 22px; font-weight: 800; color: var(--brand); margin-top: 2px; }
+.stat .sub { font-size: 11px; color: var(--muted); }
+
+/* Scroll container cho table */
+.scroll { overflow:auto; max-height: 420px; border-radius: 12px; border: 1px solid var(--line); }
+
+/* Heatmap cell */
+.hm { width: 100%; border-collapse: collapse; font-size: 11px; }
+.hm td, .hm th { border:1px solid var(--line); text-align:center; padding:4px 2px; }
+.hm th { background:#f1f5f9; color:var(--brand); font-size:10px; }
+.dark .hm th { background:#0b1220; }
+.hm .lab { background:#f8fafc; color:var(--muted); font-weight:700; }
+.dark .hm .lab { background:#0b1220; }
+
+/* tab nav (lazily cho 1-file demo nếu cần) */
+.tabs { display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom: 16px; }
+.tabs button { padding:8px 14px; border-radius: 10px 10px 0 0; font-weight:700; font-size:13px; color: var(--muted); border:none; background:transparent; cursor:pointer; }
+.tabs button.active { color: var(--brand); border-bottom: 2px solid var(--brand); }
+
+/* utility */
+.mono { font-variant-numeric: tabular-nums; font-feature-settings:"tnum"; }
+.muted { color: var(--muted); }
+.badge-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
+.live-dot { background: var(--danger); animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }

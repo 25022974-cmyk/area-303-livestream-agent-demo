@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AREA_303 · AI Livestream Strategist</title>
+  <meta name="description" content="Trung tâm điều phối phiên live Bibica — Pre-live → On-air → Post-live.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body class="min-h-full">
+  <!-- Top bar -->
+  <header class="border-b bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold" style="background:var(--brand)">A3</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-extrabold text-lg leading-none">AREA_303 <span class="text-[11px] font-semibold muted align-middle ml-1">AI Livestream Strategist</span></div>
+        <div class="text-xs muted truncate">Bibica Official Store · Shopee VN · shop_id 213989179</div>
+      </div>
+      <a href="static/prelive.html" class="btn btn-primary">Bắt đầu lập phiên →</a>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8" x-data="{ ...window.AREA303?.DATA?.meta||{} }">
+    <!-- Progress (Pre → On-air → Post) -->
+    <div class="card p-4 mb-6" id="progress">
+      <div class="section-h mb-3"><span class="step">↻</span> Vòng đời một phiên live</div>
+      <div class="progress">
+        <div class="seg active">
+          <span class="dot"></span><a href="static/prelive.html" class="hover:underline">1 · Pre-live Planner</a>
+        </div>
+        <div class="bar"></div>
+        <div class="seg"><span class="dot"></span><span>2 · On-air Assistant</span></div>
+        <div class="bar"></div>
+        <div class="seg"><span class="dot"></span><span>3 · Post-live Review</span></div>
+      </div>
+      <p class="muted text-xs mt-3">Lập kế hoạch → chạy phiên theo thời gian thực → đo lường & học lại cho phiên sau.</p>
+    </div>
+
+    <!-- 3 cards -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <a href="static/prelive.html" class="card p-5 block hover:-translate-y-0.5 transition">
+        <div class="section-h"><span class="step">1</span> Pre-live Planner</div>
+        <p class="muted text-sm mt-2 leading-relaxed">Chọn SKU lên live (HeroScore), chọn khung giờ (M3), tạo combo (M4), tính voucher theo ngân sách (M5) — rồi bấm “Tạo playbook”.</p>
+        <div class="mt-3 flex flex-wrap gap-1 text-[11px]">
+          <span class="tag tag-hook">Hero Score</span>
+          <span class="tag tag-bundle">Combo</span>
+          <span class="tag tag-core">Voucher knapsack</span>
+        </div>
+      </a>
+
+      <a href="static/onair.html" class="card p-5 block hover:-translate-y-0.5 transition">
+        <div class="section-h"><span class="step">2</span> On-air Assistant</div>
+        <p class="muted text-sm mt-2 leading-relaxed">Hiển thị playbook theo thời gian thực — timeline run-of-show, gợi ý SKU tiếp theo, nhắc deal/flash khi chuyển khung.</p>
+        <div class="mt-3 flex flex-wrap gap-1 text-[11px]">
+          <span class="tag tag-core">Run-of-show</span>
+          <span class="tag tag-hook">Hook gợi ý</span>
+        </div>
+      </a>
+
+      <a href="static/postlive.html" class="card p-5 block hover:-translate-y-0.5 transition">
+        <div class="section-h"><span class="step">3</span> Post-live Review</div>
+        <p class="muted text-sm mt-2 leading-relaxed">Tổng quan phiên (GMV, đơn, AOV), kết quả theo SKU, nhập chi phí → tính lại hero-score & lưu làm dữ liệu học cho learner.</p>
+        <div class="mt-3 flex flex-wrap gap-1 text-[11px]">
+          <span class="tag tag-clear">Learner loop</span>
+          <span class="tag tag-bundle">Đề xuất live sau</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Data provenance -->
+    <div class="card p-4 mt-6 text-xs">
+      <div class="section-h mb-2"><span class="step">i</span> Nguồn dữ liệu</div>
+      <p class="muted">UI này đọc <code>model_bibica/model_input.json</code> (100 SKU Bibica, đồng bộ từ PostgreSQL RDS <code>database-area303…ap-southeast-2</code>) và <code>playbook_bibica.json</code> (output pipeline 5 module). HeroScore được tái lập client-side theo <code>score_skus()</code> trong <code>bibica_playbook.py</code>.</p>
+    </div>
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-6 text-xs muted text-center">
+    AREA_303 prototype · auth không production-secure · dùng cho demo competition.
+  </footer>
+</body>
+</html>
