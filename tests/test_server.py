@@ -18,6 +18,7 @@
 import os
 import sys
 import unittest
+from unittest import mock
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -32,6 +33,16 @@ class TestArea303Server(unittest.TestCase):
         self.app = create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
+        # Default: AI disabled for the whole suite so existing tests never make
+        # real network calls (even if a .env with proxy placeholders is present).
+        # Patch on the route module (which imported the name) so the views see False.
+        self._ai_patch = mock.patch(
+            "src.routes.api_sessions.is_ai_configured", return_value=False
+        )
+        self._ai_patch.start()
+
+    def tearDown(self):
+        self._ai_patch.stop()
 
     def test_ui_routes(self):
         """Tests that all Jinja2 HTML page routes render successfully with 200 OK."""
@@ -130,6 +141,45 @@ class TestArea303Server(unittest.TestCase):
         fb_data = res_fb.get_json()
         self.assertEqual(fb_data["status"], "ok")
         self.assertGreater(fb_data["learning_state"]["metrics"]["n_sessions"], 0)
+
+    def test_ai_next_slot_disabled_without_config(self):
+        """When the LLM proxy is not configured, /api/sessions/ai-next-slot
+        must return 200 with suggestion=None and NEVER make a network call.
+        (setUp already disables AI; this just asserts the contract.)"""
+        res = self.client.post(
+            "/api/sessions/ai-next-slot",
+            json={"shop_id": "213989179", "current_slot_index": 0},
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data["status"], "ok")
+        self.assertFalse(data["ai_configured"])
+        self.assertIsNone(data["suggestion"])
+
+    def test_feedback_returns_ai_report_null_without_config(self):
+        """POST /api/sessions/feedback must still succeed and include ai_report
+        (null) when the LLM proxy is not configured. (setUp already disables AI.)"""
+        shop_id = "213989179"
+        res = self.client.post(
+            "/api/sessions/feedback",
+            json={
+                "shop_id": shop_id,
+                "session_id": "test_session_ai",
+                "date": "2026-08-28",
+                "actual": [{
+                    "item_id": "123",
+                    "estimated_sales": 10,
+                    "actual_sales": 9,
+                    "voucher_amount_used": 0,
+                    "voucher_redeemed": False,
+                }],
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data["status"], "ok")
+        self.assertIsNone(data["ai_report"])
+        self.assertFalse(data["ai_configured"])
 
 
 if __name__ == "__main__":

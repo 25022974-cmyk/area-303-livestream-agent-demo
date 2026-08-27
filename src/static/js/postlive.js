@@ -28,6 +28,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const learnerHistoryBody = document.getElementById("learner-history-body");
   const btnSubmitFeedback = document.getElementById("btn-submit-feedback");
 
+  // AI Post-live Report elements
+  const aiReportCard = document.getElementById("ai-report-card");
+  const aiReportBody = document.getElementById("ai-report-body");
+  const aiReportStatus = document.getElementById("ai-report-status");
+
   async function loadData() {
     try {
       const [draftResp, ordersResp, stateResp] = await Promise.all([
@@ -213,6 +218,22 @@ document.addEventListener("DOMContentLoaded", () => {
           learningState = res.learning_state;
           renderLearnerState();
           AREA303.toast("✨ Đã cập nhật thành công tham số học máy (Learner Loop) cho phiên sau!", "success");
+
+          // AI post-live report (best-effort; null khi chưa cấu hình/lỗi)
+          if (aiReportCard && aiReportBody) {
+            if (res.ai_report) {
+              aiReportBody.textContent = res.ai_report;
+              if (aiReportStatus) aiReportStatus.textContent = "✦ Phân tích từ AI";
+            } else if (res.ai_configured === false) {
+              aiReportBody.textContent = "AI chưa cấu hình. Cài đặt biến môi trường AI_PROXY_BASE_URL / AI_API_KEY để bật AI.";
+              if (aiReportStatus) aiReportStatus.textContent = "AI tắt";
+            } else {
+              aiReportBody.textContent = "AI chưa phản hồi. Lưu learner vẫn thành công.";
+              if (aiReportStatus) aiReportStatus.textContent = "AI không phản hồi";
+              AREA303.toast("AI không phản hồi, learner vẫn cập nhật thành công", "warn");
+            }
+            aiReportCard.style.display = "block";
+          }
         } else {
           AREA303.toast("Lỗi cập nhật: " + res.message, "error");
         }

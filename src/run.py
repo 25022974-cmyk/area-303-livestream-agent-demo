@@ -21,15 +21,23 @@ import sys
 # Ensure src is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+# NOTE: config.py loads .env (if present) on import, before AI_* values are read.
 from src.app import create_app
+from src.services.ai_client import is_ai_configured
 
 app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     host = os.environ.get("HOST", "127.0.0.1")
-    print(f"============================================================")
-    print(f"  AREA_303 · AI Livestream Strategist Server running at:")
+    ai_status = (
+        "ON (" + os.environ.get("AI_PROXY_BASE_URL", "") + ")"
+        if is_ai_configured()
+        else "OFF (chua cau hinh .env)"
+    )
+    print("============================================================")
+    print("  AREA_303 · AI Livestream Strategist Server running at:")
     print(f"  http://{host}:{port}/")
-    print(f"============================================================")
+    print(f"  AI proxy: {ai_status}")
+    print("============================================================")
     app.run(host=host, port=port, debug=True)

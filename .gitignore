@@ -1,1 +1,6 @@
 data/
+# AI / LLM secrets — khong commit
+.env
+.env.local
+__pycache__/
+

@@ -29,6 +29,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnLogOrder = document.getElementById("btn-log-order");
   const btnFinishShow = document.getElementById("btn-finish-show");
 
+  // AI Assistant elements (in-live suggestion after a slot ends)
+  const aiSuggestBody = document.getElementById("ai-suggest-body");
+  const aiSuggestStatus = document.getElementById("ai-suggest-status");
+
   async function loadDraft() {
     try {
       const resp = await fetch(`/api/sessions/draft/${shopId}`);
@@ -271,6 +275,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // AI Assistant — render helper & in-live request (fire-and-forget)
+  function setAiSuggest(text, statusText) {
+    if (aiSuggestBody) aiSuggestBody.textContent = text || "";
+    if (aiSuggestStatus) aiSuggestStatus.textContent = statusText || "";
+  }
+
+  function fallbackAiSuggest() {
+    const slot = showSlots[currentSlotIdx];
+    const fb = slot ? `Gợi ý mặc định: ${slot.hook}\nHành động: ${slot.action}` : "";
+    setAiSuggest(fb, "AI không phản hồi");
+    AREA303.toast("AI không phản hồi, dùng gợi ý mặc định", "warn");
+  }
+
+  async function fetchAiNextSlot() {
+    setAiSuggest("Đang phân tích log đơn và xin gợi ý từ AI…", "⏳ AI đang trả lời");
+    try {
+      const resp = await fetch("/api/sessions/ai-next-slot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shop_id: shopId, current_slot_index: currentSlotIdx }),
+      });
+      const res = await resp.json();
+      if (res.status !== "ok") {
+        setAiSuggest("", "Lỗi AI: " + (res.message || ""));
+        return;
+      }
+      if (res.ai_configured === false) {
+        // AI chưa cấu hình -> dùng gợi ý mặc định (silent, không toast lỗi)
+        const slot = showSlots[currentSlotIdx];
+        setAiSuggest(
+          slot ? `Gợi ý mặc định: ${slot.hook}\nHành động: ${slot.action}` : "",
+          "AI chưa cấu hình"
+        );
+        return;
+      }
+      if (res.suggestion) {
+        setAiSuggest(res.suggestion, "✦ Gợi ý từ AI");
+      } else {
+        fallbackAiSuggest();
+      }
+    } catch (err) {
+      console.error(err);
+      fallbackAiSuggest();
+    }
+  }
+
   // Live Timer Controls
   if (btnToggleLive) {
     btnToggleLive.addEventListener("click", () => {
@@ -296,9 +346,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnNextSlot) {
     btnNextSlot.addEventListener("click", () => {
       if (currentSlotIdx < showSlots.length - 1) {
-        currentSlotIdx++;
+        currentSlotIdx++;            // chuyển ngay (fire-and-forget)
         renderRunOfShow();
         renderCurrentSlot();
+        fetchAiNextSlot();          // gọi AI nền, không block UI
       }
     });
   }
@@ -309,6 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentSlotIdx--;
         renderRunOfShow();
         renderCurrentSlot();
+        setAiSuggest("Đã quay lại slot trước. Bấm «Slot Tiếp» để nhận gợi ý AI.", "");
       }
     });
   }

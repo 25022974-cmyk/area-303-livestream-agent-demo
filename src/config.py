@@ -29,6 +29,37 @@ TEMPLATES_DIR = SRC_DIR / "templates"
 # Create storage directory if not present
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
+
+def _load_dotenv() -> None:
+    """Loads simple KEY=VALUE pairs from a .env file into os.environ (stdlib only).
+
+    Existing environment variables are NOT overwritten, so shell-set vars win.
+    Runs once at import time so that AI_* values below read correctly. This is a
+    minimal stdlib loader (no python-dotenv dependency).
+    """
+    env_path = ROOT_DIR / ".env"
+    if not env_path.exists():
+        return
+    try:
+        for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            if not key:
+                continue
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                value = value[1:-1]
+            if key not in os.environ:
+                os.environ[key] = value
+    except Exception:
+        pass
+
+
+_load_dotenv()
+
 # Upload limits
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -132,3 +163,32 @@ PRELOADED_SHOPS = {
         "brand_color": "#e11d48",
     },
 }
+
+# ============================================================
+# AI / LLM — GLM-5.2 via Anthropic-Messages proxy
+# ============================================================
+# Configuration read from environment variables
+# (see src/config.py _load_dotenv).
+#
+# Proxy contract (Anthropic Messages API-compatible):
+#   POST <AI_PROXY_BASE_URL><AI_API_PATH>
+#   Headers: Authorization: Bearer <AI_API_KEY>,
+#            anthropic-version: 2023-06-01, Content-Type: application/json
+#   Body:    {"model": <AI_MODEL>, "max_tokens": <AI_MAX_TOKENS>,
+#            "messages": [{"role": "user"|"assistant", "content": "..." }],
+#            "system": "..." (optional)}
+#   Response: data["content"][0]["text"]
+AI_PROXY_BASE_URL = os.environ.get("AI_PROXY_BASE_URL", "").strip().rstrip("/")
+AI_API_URL = os.environ.get("AI_API_URL", "").strip()             # Full URL override (optional)
+AI_API_KEY = os.environ.get("AI_API_KEY", "").strip()
+AI_MODEL = os.environ.get("AI_MODEL", "glm-5.2").strip() or "glm-5.2"
+AI_API_PATH = os.environ.get("AI_API_PATH", "/v1/messages")        # Anthropic Messages path
+AI_ANTHROPIC_VERSION = os.environ.get("AI_ANTHROPIC_VERSION", "2023-06-01")
+try:
+    AI_REQUEST_TIMEOUT = int(os.environ.get("AI_TIMEOUT", "30"))
+except (TypeError, ValueError):
+    AI_REQUEST_TIMEOUT = 30
+try:
+    AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "1024"))
+except (TypeError, ValueError):
+    AI_MAX_TOKENS = 1024

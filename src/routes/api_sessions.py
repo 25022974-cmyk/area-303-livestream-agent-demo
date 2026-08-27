@@ -17,6 +17,8 @@
 
 from flask import Blueprint, jsonify, request
 
+from ..services.ai_client import is_ai_configured
+from ..services.ai_service import review_post_live, suggest_next_slot
 from ..services.session_service import session_service
 from ..services.shop_service import shop_service
 
@@ -97,7 +99,8 @@ def clear_orders():
 
 @api_sessions_bp.route("/feedback", methods=["POST"])
 def post_feedback():
-    """Submits actual sales results and updates online learner parameters."""
+    """Submits actual sales results, updates online learner parameters, then
+    asks the LLM for a post-live decision / report (ai_report may be null)."""
     body = request.get_json() or {}
     shop_id = str(body.get("shop_id", "")).strip()
 
@@ -106,7 +109,66 @@ def post_feedback():
 
     try:
         sid = shop_service.validate_shop_id(shop_id)
+        # Snapshot state BEFORE update so the AI can compare the weight trend.
+        prev_state = shop_service.load_learning_state(sid)
         new_state = session_service.submit_postlive_feedback(sid, body)
-        return jsonify({"status": "ok", "learning_state": new_state})
+
+        # AI post-live review is best-effort; failures must not break the save.
+        ai_report = review_post_live(
+            shop_id=sid,
+            feedback_payload=body,
+            new_state=new_state,
+            prev_state=prev_state,
+        )
+
+        return jsonify({
+            "status": "ok",
+            "learning_state": new_state,
+            "ai_report": ai_report,
+            "ai_configured": is_ai_configured(),
+        })
+    except Exception as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 500
+
+
+@api_sessions_bp.route("/ai-next-slot", methods=["POST"])
+def ai_next_slot():
+    """Asks the LLM for an in-live suggestion for the upcoming slot.
+
+    Called (non-blocking from the UI) right after the operator clicks 'Slot tiep'.
+    Returns suggestion=None (ai_configured=False) without any network call when the
+    proxy is not configured, so this endpoint stays safe to call in tests/offline.
+    """
+    body = request.get_json() or {}
+    shop_id = str(body.get("shop_id", "")).strip()
+    current_slot_index = body.get("current_slot_index", 0)
+
+    if not shop_id:
+        return jsonify({"status": "error", "message": "Missing shop_id"}), 400
+
+    try:
+        sid = shop_service.validate_shop_id(shop_id)
+        if not is_ai_configured():
+            return jsonify({
+                "status": "ok",
+                "ai_configured": False,
+                "suggestion": None,
+            })
+
+        draft = session_service.get_draft_playbook(sid) or {}
+        orders = session_service.get_onair_orders(sid)
+        learning_state = shop_service.load_learning_state(sid)
+        suggestion = suggest_next_slot(
+            shop_id=sid,
+            draft=draft,
+            current_slot_index=int(current_slot_index),
+            slot_orders=orders,
+            learning_state=learning_state,
+        )
+        return jsonify({
+            "status": "ok",
+            "ai_configured": True,
+            "suggestion": suggestion,
+        })
     except Exception as exc:
         return jsonify({"status": "error", "message": str(exc)}), 500
