@@ -1,5 +1,10 @@
 # Livestream Agent Demo - Agent Instruction
 
+## Development Environment
+
+Always create and use a virtual environment with suitable tool on host machine.
+Any installed dependencies should be updated into `pyproject.toml`.
+
 ## Tech Stack
 
 - Server: Flask
