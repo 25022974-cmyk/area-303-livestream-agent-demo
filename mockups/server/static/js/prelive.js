@@ -43,6 +43,12 @@ function prelive() {
         return true;
       }).sort((a, b) => b.hero_score - a.hero_score);
     },
+    filteredSingles() {
+      return this.filtered().filter(i => !i.is_combo);
+    },
+    filteredCombos() {
+      return this.filtered().filter(i => i.is_combo);
+    },
 
     toggle(id) {
       const k = this.selectedIds.indexOf(id);
@@ -56,7 +62,13 @@ function prelive() {
     },
 
     lineTag(line) {
-      const m = { Zoo: "tag-bundle", Quasure: "tag-core", Gooka: "tag-hook", Sumika: "tag-bundle", Hura: "tag-core", Other: "tag-soldout" };
+      const m = {
+        "Ăn kiêng / Ít đường": "tag-core",
+        "Bánh ăn sáng": "tag-clear",
+        "Kẹo": "tag-bundle",
+        "Bánh": "tag-hook",
+        "Khác": "tag-soldout"
+      };
       return m[line] || "tag-soldout";
     },
 

@@ -59,14 +59,59 @@
       const avgDaily = ad.length ? ad.reduce((a, b) => a + b, 0) / ad.length : 0;
       const nm = (r.product_name || "").toUpperCase();
       const isGift = nm.includes("QUÀ TẶNG KHÔNG BÁN") || nm.includes("QUA TANG KHONG BAN");
-      // line gợi ý từ tên (DELIVERABLE_SPEC yêu cầu Zoo/Quasure/Gooka/Sumika/Other)
-      let line = "Other";
-      const N = (r.product_name || "").toLowerCase();
-      if (N.includes("zoo")) line = "Zoo";
-      else if (N.includes("quasure")) line = "Quasure";
-      else if (N.includes("gooka")) line = "Gooka";
-      else if (N.includes("sumika")) line = "Sumika";
-      else if (N.includes("hura")) line = "Hura";
+      // line gợi ý từ tên được phân loại lại theo yêu cầu loại sản phẩm (không dùng tên riêng thương hiệu)
+      let line = "Khác";
+      const N = (r.product_name || "").normalize("NFC").toLowerCase();
+      if (
+        N.includes("quasure") ||
+        N.includes("ăn kiêng") ||
+        N.includes("không đường") ||
+        N.includes("ít đường") ||
+        N.includes("sugar free") ||
+        N.includes("no sugar") ||
+        N.includes("giảm đường") ||
+        N.includes("giảm 40% đường")
+      ) {
+        line = "Ăn kiêng / Ít đường";
+      } else if (
+        N.includes("bánh ăn sáng") ||
+        N.includes("bánh tươi olive") ||
+        N.includes("bánh mì") ||
+        N.includes("sandwich") ||
+        N.includes("chà bông") ||
+        N.includes("olive")
+      ) {
+        line = "Bánh ăn sáng";
+      } else if (
+        N.includes("kẹo") ||
+        N.includes("thạch") ||
+        N.includes("zoo") ||
+        N.includes("sumika") ||
+        N.includes("cheery") ||
+        N.includes("welly") ||
+        N.includes("migita") ||
+        N.includes("michoco") ||
+        N.includes("tứ quý")
+      ) {
+        line = "Kẹo";
+      } else if (
+        N.includes("bánh") ||
+        N.includes("gooka") ||
+        N.includes("hura") ||
+        N.includes("goody") ||
+        N.includes("jamy") ||
+        N.includes("cookies") ||
+        N.includes("cracker") ||
+        N.includes("bông lan") ||
+        N.includes("cuộn") ||
+        N.includes("swissroll") ||
+        N.includes("layercake") ||
+        N.includes("ngũ cốc") ||
+        N.includes("bột ngũ cốc")
+      ) {
+        line = "Bánh";
+      }
+
       return {
         item_id: iid,
         name: r.product_name,
@@ -74,6 +119,7 @@
         orig: Number(r.price_original || 0),
         disc_pct: disc,
         ms, rc, rating, liked, sold_out: soldOut, is_gift: isGift, line,
+        is_combo: N.includes("combo"),
         age_days: ageDays(r.ctime),
         discount_headroom: headroom,
         avg_daily: avgDaily,

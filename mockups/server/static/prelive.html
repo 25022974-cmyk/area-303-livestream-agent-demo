@@ -39,8 +39,11 @@
           <label class="muted">Bộ lọc:</label>
           <select class="inp !py-1.5 !w-auto" x-model="f.line">
             <option value="">Tất cả dòng</option>
-            <option>Zoo</option><option>Quasure</option><option>Gooka</option>
-            <option>Sumika</option><option>Hura</option><option>Other</option>
+            <option>Ăn kiêng / Ít đường</option>
+            <option>Bánh ăn sáng</option>
+            <option>Kẹo</option>
+            <option>Bánh</option>
+            <option>Khác</option>
           </select>
           <select class="inp !py-1.5 !w-auto" x-model="f.gift">
             <option value="">Tất cả SKU</option>
@@ -55,54 +58,120 @@
         </div>
       </div>
 
-      <div class="scroll">
-        <table class="sku">
-          <thead>
-            <tr>
-              <th></th>
-              <th>SKU</th>
-              <th>Dòng</th>
-              <th>HeroScore</th>
-              <th>Giá</th>
-              <th>Giá gốc</th>
-              <th>-%</th>
-              <th class="mono">Sold/tháng</th>
-              <th class="mono">RC</th>
-              <th>Voucher</th>
-              <th>Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template x-for="i in filtered()" :key="i.item_id">
-              <tr :class="selectedIds.includes(i.item_id) && 'bg-[var(--brand-soft)]'">
-                <td><input type="checkbox" :checked="selectedIds.includes(i.item_id)" @change="toggle(i.item_id)"></td>
-                <td>
-                  <div class="font-semibold max-w-[260px] truncate" x-text="i.name" :title="i.name"></div>
-                  <div class="text-[11px] muted mono" x-text="i.item_id"></div>
-                </td>
-                <td><span class="tag" :class="lineTag(i.line)" x-text="i.line"></span></td>
-                <td>
-                  <div class="score">
-                    <span class="mono" x-text="i.hero_score.toFixed(2)"></span>
-                    <span class="score bar"><i :style="`width:${Math.round(i.hero_score*100)}%`"></i></span>
-                  </div>
-                </td>
-                <td class="mono" x-text="AREA303.vnd(i.price)"></td>
-                <td class="mono muted" x-text="AREA303.vnd(i.orig)"></td>
-                <td class="mono" :class="i.disc_pct>=40 && 'text-[var(--danger)] font-bold'" x-text="AREA303.pct(i.disc_pct)"></td>
-                <td class="mono" x-text="num(i.ms)"></td>
-                <td class="mono" x-text="num(i.rc)"></td>
-                <td class="mono text-[11px]" x-text="i.voucher ? ('−'+AREA303.vnd(i.v_disc)) : '—'" :title="i.voucher"></td>
-                <td>
-                  <span x-show="i.sold_out" class="tag tag-soldout">hết hàng</span>
-                  <span x-show="i.margin_unsafe && !i.sold_out" class="tag tag-clear">⚠ margin</span>
-                  <span x-show="i.slow_mover && !i.sold_out" class="tag tag-clear">slow</span>
-                  <span x-show="!i.sold_out && !i.slow_mover && !i.margin_unsafe" class="muted text-[11px]">—</span>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Cột trái: Sản phẩm đơn -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center px-1">
+            <span class="font-bold text-slate-700 text-sm">🛍️ Sản phẩm đơn</span>
+            <span class="text-xs muted" x-text="`${filteredSingles().length} sản phẩm`"></span>
+          </div>
+          <div class="scroll">
+            <table class="sku">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>SKU</th>
+                  <th>Dòng</th>
+                  <th>HeroScore</th>
+                  <th>Giá</th>
+                  <th>Giá gốc</th>
+                  <th>-%</th>
+                  <th class="mono">Sold</th>
+                  <th class="mono">RC</th>
+                  <th>Voucher</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="i in filteredSingles()" :key="i.item_id">
+                  <tr :class="selectedIds.includes(i.item_id) && 'bg-[var(--brand-soft)]'">
+                    <td><input type="checkbox" :checked="selectedIds.includes(i.item_id)" @change="toggle(i.item_id)"></td>
+                    <td>
+                      <div class="font-semibold max-w-[200px] truncate" x-text="i.name" :title="i.name"></div>
+                      <div class="text-[11px] muted mono" x-text="i.item_id"></div>
+                    </td>
+                    <td><span class="tag" :class="lineTag(i.line)" x-text="i.line"></span></td>
+                    <td>
+                      <div class="score">
+                        <span class="mono" x-text="i.hero_score.toFixed(2)"></span>
+                        <span class="score bar"><i :style="`width:${Math.round(i.hero_score*100)}%`"></i></span>
+                      </div>
+                    </td>
+                    <td class="mono" x-text="AREA303.vnd(i.price)"></td>
+                    <td class="mono muted" x-text="AREA303.vnd(i.orig)"></td>
+                    <td class="mono" :class="i.disc_pct>=40 && 'text-[var(--danger)] font-bold'" x-text="AREA303.pct(i.disc_pct)"></td>
+                    <td class="mono" x-text="num(i.ms)"></td>
+                    <td class="mono" x-text="num(i.rc)"></td>
+                    <td class="mono text-[11px]" x-text="i.voucher ? ('−'+AREA303.vnd(i.v_disc)) : '—'" :title="i.voucher"></td>
+                    <td>
+                      <span x-show="i.sold_out" class="tag tag-soldout">hết hàng</span>
+                      <span x-show="i.margin_unsafe && !i.sold_out" class="tag tag-clear">⚠ margin</span>
+                      <span x-show="i.slow_mover && !i.sold_out" class="tag tag-clear">slow</span>
+                      <span x-show="!i.sold_out && !i.slow_mover && !i.margin_unsafe" class="muted text-[11px]">—</span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cột phải: Combo -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center px-1">
+            <span class="font-bold text-slate-700 text-sm">📦 Combo sản phẩm</span>
+            <span class="text-xs muted" x-text="`${filteredCombos().length} sản phẩm`"></span>
+          </div>
+          <div class="scroll">
+            <table class="sku">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>SKU</th>
+                  <th>Dòng</th>
+                  <th>HeroScore</th>
+                  <th>Giá</th>
+                  <th>Giá gốc</th>
+                  <th>-%</th>
+                  <th class="mono">Sold</th>
+                  <th class="mono">RC</th>
+                  <th>Voucher</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="i in filteredCombos()" :key="i.item_id">
+                  <tr :class="selectedIds.includes(i.item_id) && 'bg-[var(--brand-soft)]'">
+                    <td><input type="checkbox" :checked="selectedIds.includes(i.item_id)" @change="toggle(i.item_id)"></td>
+                    <td>
+                      <div class="font-semibold max-w-[200px] truncate" x-text="i.name" :title="i.name"></div>
+                      <div class="text-[11px] muted mono" x-text="i.item_id"></div>
+                    </td>
+                    <td><span class="tag" :class="lineTag(i.line)" x-text="i.line"></span></td>
+                    <td>
+                      <div class="score">
+                        <span class="mono" x-text="i.hero_score.toFixed(2)"></span>
+                        <span class="score bar"><i :style="`width:${Math.round(i.hero_score*100)}%`"></i></span>
+                      </div>
+                    </td>
+                    <td class="mono" x-text="AREA303.vnd(i.price)"></td>
+                    <td class="mono muted" x-text="AREA303.vnd(i.orig)"></td>
+                    <td class="mono" :class="i.disc_pct>=40 && 'text-[var(--danger)] font-bold'" x-text="AREA303.pct(i.disc_pct)"></td>
+                    <td class="mono" x-text="num(i.ms)"></td>
+                    <td class="mono" x-text="num(i.rc)"></td>
+                    <td class="mono text-[11px]" x-text="i.voucher ? ('−'+AREA303.vnd(i.v_disc)) : '—'" :title="i.voucher"></td>
+                    <td>
+                      <span x-show="i.sold_out" class="tag tag-soldout">hết hàng</span>
+                      <span x-show="i.margin_unsafe && !i.sold_out" class="tag tag-clear">⚠ margin</span>
+                      <span x-show="i.slow_mover && !i.sold_out" class="tag tag-clear">slow</span>
+                      <span x-show="!i.sold_out && !i.slow_mover && !i.margin_unsafe" class="muted text-[11px]">—</span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <div class="text-xs muted mt-2 flex items-center gap-3">
         <span x-text="`Đã chọn ${selectedIds.length} SKU`"></span>·
