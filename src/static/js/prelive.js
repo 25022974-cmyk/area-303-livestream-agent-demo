@@ -31,9 +31,34 @@ document.addEventListener("DOMContentLoaded", () => {
   // Elements
   const loadingEl = document.getElementById("loading-state");
   const mainContentEl = document.getElementById("main-content");
-  const skuTableBody = document.getElementById("sku-table-body");
+  const skuTableBodySingles = document.getElementById("sku-table-body-singles");
+  const skuTableBodyCombos = document.getElementById("sku-table-body-combos");
   const combosContainer = document.getElementById("combos-container");
   const vouchersContainer = document.getElementById("vouchers-container");
+  const singleCountEl = document.getElementById("single-count");
+  const comboCountEl = document.getElementById("combo-count");
+
+  // Review (Section 5) Elements
+  const reviewRecapEl = document.getElementById("review-recap");
+  const reviewSummaryBadge = document.getElementById("review-summary-badge");
+  const reviewBody = document.getElementById("review-body");
+  const reviewTableWrap = document.getElementById("review-table-wrap");
+  const reviewEmptyEl = document.getElementById("review-empty");
+
+  /* ---------- Dòng sản phẩm (nhóm loại sản phẩm) ----------
+     Mirror logic buildScoredItems() trong mockups/server/static/js/app.js:
+     phân dòng theo loại sản phẩm chứ không theo thương hiệu. Kẹo chạy
+     trước Bánh do nhiều tên combo chứa cả hai từ. Chuẩn hoá NFC như app.js. */
+  const LINE_PATTERNS = [
+    { re: /quasure|ăn kiêng|không đường|ít đường|sugar free|no sugar|giảm đường|giảm 40% đường/, group: "Ăn kiêng / Ít đường" },
+    { re: /bánh ăn sáng|bánh tươi olive|bánh mì|sandwich|chà bông|olive/, group: "Bánh ăn sáng" },
+    { re: /kẹo|thạch|zoo|sumika|cheery|welly|migita|michoco|tứ quý/, group: "Kẹo" },
+    { re: /bánh|gooka|hura|goody|jamy|cookies|cracker|bông lan|cuộn|swissroll|layercake|ngũ cốc|bột ngũ cốc/, group: "Bánh" },
+  ];
+  function productGroup(name) {
+    const n = (name || "").normalize("NFC").toLowerCase();
+    return (LINE_PATTERNS.find(p => p.re.test(n)) || {}).group || "Khác";
+  }
 
   // Timeslot Elements
   const liveDateInput = document.getElementById("live-date");
@@ -95,6 +120,16 @@ document.addEventListener("DOMContentLoaded", () => {
         pipelineData = res.recommendation;
         allSkus = pipelineData.m2_heros || [];
 
+        // Bổ sung 2 trường dẫn xuất phía client (không đụng backend):
+        //  - is_combo:       tên có chữ "combo" (mirror mockup app.js)
+        //  - product_group:   dòng theo nhóm loại sản phẩm (thay cho line thương hiệu)
+        // line gốc (Zoo/Quasure/...) vẫn giữ trên object để backend/playbook dùng.
+        allSkus = allSkus.map(s => ({
+          ...s,
+          is_combo: (s.name || "").toLowerCase().includes("combo"),
+          product_group: productGroup(s.name),
+        }));
+
         // Auto-select top 8 SKUs initially (hành vi gốc — tick tự do, không khoá).
         selectedSkuIds.clear();
         allSkus.slice(0, 8).forEach(s => selectedSkuIds.add(s.item_id));
@@ -153,6 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pipelineData.summary.selected_skus = 0;
       renderVouchers();
       renderKPIs();
+      renderReview();
       return;
     }
     try {
@@ -174,6 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pipelineData.summary = rec.summary;
         renderVouchers();
         renderKPIs();
+        renderReview();
         if (rec.m5_voucher && rec.m5_voucher.error) {
           AREA303.toast("M5: " + rec.m5_voucher.error, "warn");
         }
@@ -192,6 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderSkusTable();
     renderCombos();
     renderVouchers();
+    renderReview();
   }
 
   function renderKPIs() {
@@ -222,6 +260,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (liveDurationBadge) {
       liveDurationBadge.textContent = `Thời lượng: ${hrs}h ${mins.toString().padStart(2, "0")}m`;
     }
+    // Recap Section 5 hiển thị khung giờ → cập nhật khi đủ pipelineData (guarded bên trong).
+    renderReview();
   }
 
   function renderTimeslotSection() {
@@ -326,26 +366,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ---------- SKUs Table Rendering ---------- */
+  /* ---------- SKUs Table Rendering (2 cột: Sản phẩm đơn / Combo) ---------- */
 
-  function renderSkusTable() {
-    if (!skuTableBody) return;
-    skuTableBody.innerHTML = "";
-
-    const filtered = allSkus.filter(s => {
-      if (filters.line && s.line !== filters.line) return false;
+  function filterSkus() {
+    return allSkus.filter(s => {
+      // Bộ lọc dòng: so với product_group (nhóm loại sản phẩm), KHÔNG phải line thương hiệu.
+      if (filters.line && s.product_group !== filters.line) return false;
       if (filters.gift === "hide" && s.name.toUpperCase().includes("QUÀ TẶNG")) return false;
       if (filters.gift === "only" && !s.name.toUpperCase().includes("QUÀ TẶNG")) return false;
       if (filters.maxPrice && s.price > filters.maxPrice * 1000) return false;
       if (filters.minScore && s.hero_score < filters.minScore) return false;
       if (filters.search && !s.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
       return true;
-    });
+    }).sort((a, b) => b.hero_score - a.hero_score);
+  }
+
+  // Render một danh sách SKU vào <tbody> cho trước. Markup giữ nguyên như gốc:
+  // checkbox, rank, name, badge dòng, giá, scenario M1, hero-score bar.
+  function renderSkuRows(bodyEl, list) {
+    if (!bodyEl) return;
+    bodyEl.innerHTML = "";
 
     const m1Map = {};
-    (pipelineData.m1_pricing.items || []).forEach(p => { m1Map[p.item_id] = p; });
+    (pipelineData?.m1_pricing?.items || []).forEach(p => { m1Map[p.item_id] = p; });
 
-    filtered.forEach(sku => {
+    list.forEach(sku => {
       const tr = document.createElement("tr");
       const isSelected = selectedSkuIds.has(sku.item_id);
       const m1 = m1Map[sku.item_id] || { scenario: "hold", discount_pct: 0 };
@@ -360,9 +405,9 @@ document.addEventListener("DOMContentLoaded", () => {
         </td>
         <td style="width: 50px; font-weight: 700; color: var(--muted);">#${sku.rank}</td>
         <td>
-          <div style="font-weight: 600; color: var(--text);">${sku.name}</div>
+          <div style="font-weight: 600; color: var(--text); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${sku.name}">${sku.name}</div>
           <div style="font-size: 0.6875rem; color: var(--muted); margin-top: 2px;">
-            <span class="badge" style="background: var(--brand-soft); color: var(--brand);">${sku.line}</span>
+            <span class="badge" style="background: var(--brand-soft); color: var(--brand);">${sku.product_group}</span>
             <span style="margin-left: 6px;">Đã bán: ${AREA303.num(sku.raw_values.monthly_sold)}</span>
           </div>
         </td>
@@ -377,19 +422,39 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </td>
       `;
-      skuTableBody.appendChild(tr);
+      bodyEl.appendChild(tr);
     });
 
-    document.querySelectorAll(".sku-checkbox").forEach(cb => {
+    // Gắn listener checkbox cho riêng body này (scope inside bodyEl).
+    // KHÔNG re-render bảng khi tick (giữ scroll/focus + tránh rebuild cả 2 cột) —
+    // chỉ cập nhật nền highlight của <tr> chứa checkbox, đúng hành vi gốc.
+    bodyEl.querySelectorAll(".sku-checkbox").forEach(cb => {
       cb.addEventListener("change", (e) => {
         const id = e.target.getAttribute("data-id");
         if (e.target.checked) selectedSkuIds.add(id);
         else selectedSkuIds.delete(id);
         if (statSelectedCount) statSelectedCount.textContent = selectedSkuIds.size;
+        cb.closest("tr").style.background = e.target.checked
+          ? "var(--brand-soft)"
+          : "";
+        // Cập nhật bảng tổng hợp Section 5.
+        renderReview();
         // Re-run M5 cho đúng tập đã tick (debounce)
         scheduleM5Rerun();
       });
     });
+  }
+
+  function renderSkusTable() {
+    const matched = filterSkus();
+    const singles = matched.filter(s => !s.is_combo);
+    const combos = matched.filter(s => s.is_combo);
+
+    renderSkuRows(skuTableBodySingles, singles);
+    renderSkuRows(skuTableBodyCombos, combos);
+
+    if (singleCountEl) singleCountEl.textContent = singles.length;
+    if (comboCountEl) comboCountEl.textContent = combos.length;
   }
 
   /* ---------- Combos & Vouchers Rendering ---------- */
@@ -442,6 +507,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target.checked) selectedComboIds.add(cid);
         else selectedComboIds.delete(cid);
         renderCombos();
+        // Cập nhật bảng tổng hợp Section 5.
+        renderReview();
       });
     });
   }
@@ -481,6 +548,161 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  /* ---------- Section 5: Bảng tổng hợp lựa chọn ---------- */
+
+  // Mỗi "thẻ" recap trong #review-recap.
+  function recapItem(label, value) {
+    return `<div style="flex:1; min-width:160px; background:#f8fafc; border:1px solid var(--line); border-radius:0.5rem; padding:0.5rem 0.625rem;">
+      <div style="font-size:0.6875rem; font-weight:700; color:var(--muted); text-transform:uppercase;">${label}</div>
+      <div style="font-weight:800; font-size:0.9375rem; color:var(--text); margin-top:2px;">${value}</div>
+    </div>`;
+  }
+
+  // Render bảng tổng hợp: Sản phẩm đơn đã chọn + Combo đã chọn, kèm recap
+  // khung giờ / ngân sách / số voucher. Tự gọi lại khi tick SKU/combo (xem hooks).
+  function renderReview() {
+    if (!pipelineData) return;
+
+    // Recap header
+    const startMins = parseMinutes(selectedStartTime);
+    let endMins = parseMinutes(selectedEndTime);
+    if (endMins <= startMins) endMins += 24 * 60;
+    const durH = Math.floor((endMins - startMins) / 60);
+    const durM = (endMins - startMins) % 60;
+
+    if (reviewRecapEl) {
+      const slotStr = `${selectedDate} · ${selectedStartTime}–${selectedEndTime} (${durH}h${durM ? " " + durM + "m" : ""})`;
+      const budgetUsed = pipelineData.m5_voucher?.total_used || 0;
+      const nVouchers = (pipelineData.m5_voucher?.sku_allocations || []).filter(a => a.is_selected).length;
+      reviewRecapEl.innerHTML =
+        recapItem("Khung giờ (M3)", slotStr) +
+        recapItem("Ngân sách đã dùng (M5)", AREA303.vnd(budgetUsed)) +
+        recapItem("Voucher phân bổ", String(nVouchers));
+    }
+
+    // SKU đã tick, chia theo is_combo (đồng bộ với bảng Section 1).
+    const selected = allSkus.filter(s => selectedSkuIds.has(s.item_id));
+    const selSingles = selected.filter(s => !s.is_combo);
+    const selCombosSku = selected.filter(s => s.is_combo);
+
+    // Combo M4 đã tick ("Ghép live").
+    const selCombosM4 = (pipelineData.m4_combos || []).filter(c => selectedComboIds.has(c.combo_id));
+
+    // Map M1 scenario cho badge
+    const m1Map = {};
+    (pipelineData?.m1_pricing?.items || []).forEach(p => { m1Map[p.item_id] = p; });
+    function scenarioBadge(item_id) {
+      const m1 = m1Map[item_id] || { scenario: "hold", discount_pct: 0 };
+      if (m1.scenario === "mild") return `<span class="badge tag-mild">GIẢM -${m1.discount_pct}%</span>`;
+      if (m1.scenario === "flash") return `<span class="badge tag-flash">FLASH -${m1.discount_pct}%</span>`;
+      return `<span class="badge tag-hold">GIỮ GIÁ</span>`;
+    }
+
+    // ---- Bảng tổng hợp DUY NHẤT ----
+    // Gộp 3 loại lựa chọn vào 1 bảng, phân biệt qua cột "Loại":
+    //  - Sản phẩm đơn (SKU không phải combo)
+    //  - Combo SKU    (tên có "combo", tick từ bảng Section 2 cột phải)
+    //  - Combo M4      (gói đề xuất từ M4, tick "Ghép live")
+    // Mỗi nút ✕ mang data-id (SKU) hoặc data-cid (combo M4); JS gỡ theo loại đó.
+    const TYPE_SINGLE   = `<span class="badge" style="background:var(--brand-soft); color:var(--brand);">Sản phẩm đơn</span>`;
+    const TYPE_COMBO_SKU = `<span class="badge" style="background:rgba(124,58,237,0.08); color:var(--purple);">Combo SKU</span>`;
+    const TYPE_COMBO_M4  = `<span class="badge tag-bundle">Combo M4</span>`;
+    const REMOVE_SKU = (id) => `<td style="text-align:center;">
+      <button class="review-remove-btn" data-id="${id}"
+        style="background:none; border:none; color:var(--danger, #ef4444); cursor:pointer; font-weight:700; padding:2px 6px;"
+        title="Bỏ chọn cho live">✕</button></td>`;
+    const REMOVE_M4 = (cid) => `<td style="text-align:center;">
+      <button class="review-remove-combo-btn" data-cid="${cid}"
+        style="background:none; border:none; color:var(--danger, #ef4444); cursor:pointer; font-weight:700; padding:2px 6px;"
+        title="Bỏ gói combo này">✕</button></td>`;
+    const HERO = (s) => s.hero_score != null
+      ? `<span style="font-weight:700; font-size:0.75rem;">${s.hero_score.toFixed(2)}</span>`
+      : `<span style="color:var(--muted); font-size:0.75rem;">—</span>`;
+
+    let rows = "";
+
+    // 1) Sản phẩm đơn đã chọn
+    rows += selSingles.map(s => `
+      <tr>
+        <td>${TYPE_SINGLE}</td>
+        <td>
+          <div style="font-weight:600; color:var(--text); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.name}">${s.name}</div>
+          <div style="font-size:0.6875rem; color:var(--muted);">${s.item_id}</div>
+        </td>
+        <td><span class="badge" style="background:var(--brand-soft); color:var(--brand);">${s.product_group}</span></td>
+        <td style="font-weight:700; white-space:nowrap;">${AREA303.vnd(s.price)}</td>
+        <td>${scenarioBadge(s.item_id)}</td>
+        <td>${HERO(s)}</td>
+        ${REMOVE_SKU(s.item_id)}
+      </tr>
+    `).join("");
+
+    // 2) Combo SKU (tên có "combo", tick từ Section 2 cột phải)
+    rows += selCombosSku.map(s => `
+      <tr>
+        <td>${TYPE_COMBO_SKU}</td>
+        <td>
+          <div style="font-weight:600; color:var(--text); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${s.name}">${s.name}</div>
+          <div style="font-size:0.6875rem; color:var(--muted);">${s.item_id}</div>
+        </td>
+        <td><span class="badge" style="background:var(--brand-soft); color:var(--brand);">${s.product_group}</span></td>
+        <td style="font-weight:700; color:var(--purple); white-space:nowrap;">${AREA303.vnd(s.price)}</td>
+        <td>${scenarioBadge(s.item_id)}</td>
+        <td>${HERO(s)}</td>
+        ${REMOVE_SKU(s.item_id)}
+      </tr>
+    `).join("");
+
+    // 3) Combo M4 đã tick "Ghép live" (gói bundle/GWP)
+    rows += selCombosM4.map(c => `
+      <tr>
+        <td>${TYPE_COMBO_M4}</td>
+        <td>
+          <div style="font-weight:600; color:var(--text); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.combo_name}">${c.combo_name}</div>
+          <div style="font-size:0.6875rem; color:var(--muted);">${c.type_label || ""}${c.line ? " · " + c.line : ""}</div>
+        </td>
+        <td><span class="badge" style="background:var(--brand-soft); color:var(--brand);">${c.line || "—"}</span></td>
+        <td style="font-weight:700; color:var(--purple); white-space:nowrap;">${AREA303.vnd(c.bundle_price)}</td>
+        <td><span style="color:var(--ok); font-weight:600; font-size:0.75rem;">Tiết kiệm ${AREA303.vnd(c.savings)}</span></td>
+        <td><span style="color:var(--muted); font-size:0.75rem;">—</span></td>
+        ${REMOVE_M4(c.combo_id)}
+      </tr>
+    `).join("");
+
+    if (reviewBody) reviewBody.innerHTML = rows;
+
+    // Empty state: ẩn bảng khi chưa chọn gì, hiện nhãn gợi ý.
+    const totalSel = selSingles.length + selCombosSku.length + selCombosM4.length;
+    if (reviewEmptyEl) reviewEmptyEl.style.display = totalSel === 0 ? "block" : "none";
+    if (reviewTableWrap) reviewTableWrap.style.display = totalSel === 0 ? "none" : "block";
+
+    // Summary badge
+    if (reviewSummaryBadge) {
+      reviewSummaryBadge.textContent =
+        `${selSingles.length} đơn · ${selCombosSku.length + selCombosM4.length} combo · ${selectedSkuIds.size} SKU lên live`;
+    }
+
+    // Gắn nút ✕ bỏ chọn (scope toàn document vì innerHTML vừa render lại).
+    document.querySelectorAll(".review-remove-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedSkuIds.delete(btn.getAttribute("data-id"));
+        btn.closest("tr")?.remove();
+        renderSkusTable();
+        renderReview();
+        if (statSelectedCount) statSelectedCount.textContent = selectedSkuIds.size;
+        scheduleM5Rerun();
+      });
+    });
+    document.querySelectorAll(".review-remove-combo-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedComboIds.delete(btn.getAttribute("data-cid"));
+        btn.closest("tr")?.remove();
+        renderCombos();
+        renderReview();
+      });
+    });
+  }
+
   // Filter Listeners
   const filterLine = document.getElementById("filter-line");
   const filterGift = document.getElementById("filter-gift");
@@ -513,6 +735,7 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedSkuIds.clear();
       allSkus.slice(0, 10).forEach(s => selectedSkuIds.add(s.item_id));
       renderSkusTable();
+      renderReview();
       if (statSelectedCount) statSelectedCount.textContent = selectedSkuIds.size;
       AREA303.toast("Đã tự động chọn Top 10 SKU có Hero Score cao nhất!", "success");
       // Re-run M5 cho tập Top 10 mới
