@@ -773,6 +773,20 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       try {
+        AREA303.toast("Đang chuẩn bị để chuyển sang On-air...", "info");
+
+        const deleteOldOrders = await fetch("/api/sessions/clear-orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shop_id: shopId })
+        }).then(resp => resp.json());
+
+        if (deleteOldOrders.status === "ok") {
+          AREA303.toast("Đã xóa thành công dữ liệu orders tạm của phiên live trước!", "success");
+        } else {
+          AREA303.toast("Chưa xóa được dữ liệu orders của phiên live trước, chú ý kiểm tra!", "warn");
+        }
+
         const resp = await fetch("/api/sessions/save-draft", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
