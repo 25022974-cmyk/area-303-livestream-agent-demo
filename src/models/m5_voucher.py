@@ -222,7 +222,7 @@ def optimize_voucher_budget(
             "voucher_amount": pick["voucher_disc"],
             "min_spend": pick["min_spend"],
             "price_final": pick["price_final"],
-            "expected_sales": round(pick["est_sales"], 1),
+            "expected_sales": round(pick["est_sales"]),
             "voucher_cost": round(cost_v),
             "is_selected": pick["voucher_disc"] > 0 or pick["discount_pct"] > 0,
         })
