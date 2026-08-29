@@ -45,7 +45,7 @@ def calculate_estimated_sales(
     min_spend = max(0.0, voucher_min_spend)
 
     # Customer attraction equation
-    factor = 1.0 + alpha * (total_savings / price_original) - beta * (min_spend / 200_000.0)
+    factor = (1.0 / 30) + alpha * (total_savings / price_original) - beta * (min_spend / 200_000.0)
     factor = max(0.0, factor)       # factor là nhân tố tăng/giảm nhu cầu khách hàng dựa trên mức giảm giá và điều kiện sử dụng voucher
     return ms * factor
 

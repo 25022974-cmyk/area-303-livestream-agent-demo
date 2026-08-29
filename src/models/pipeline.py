@@ -101,7 +101,7 @@ def run_pipeline(
     )
 
     # Summary KPI lift estimation
-    baseline_gmv = sum(to_float(r.get("monthly_sold_value")) for r in data_pool)
+    baseline_gmv = sum(to_float(r.get("monthly_sold_value")) for r in data_pool) / 30
     m5_error = str(voucher_plan.get("error", ""))
     # Khi M5 báo lỗi (must_select_all=True không thể chọn hết), total_estimated_sales=0
     # sẽ cho lift sai nghĩa (−100%); dùng baseline để lift = 0% (trung tính).
