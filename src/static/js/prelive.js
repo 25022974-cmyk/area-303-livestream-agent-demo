@@ -524,7 +524,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    allocations.slice(0, 6).forEach(a => {
+    allocations.forEach(a => {
       const vEl = document.createElement("div");
       vEl.style.display = "flex";
       vEl.style.justifyContent = "space-between";
