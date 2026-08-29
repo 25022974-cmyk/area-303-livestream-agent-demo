@@ -18,15 +18,14 @@ from typing import Any, Dict, List, Optional
 from ._helpers import norm, to_float, ts_to_dt
 
 # Trọng số đề bài (spec E: lấy từ docx, không tự chế).
-W_MS = 0.30
-W_RC = 0.25
-W_RATING = 0.15
-W_HEADROOM = 0.15
-W_FRESHNESS = 0.15
+W_MS = 0.2
+W_RC = 0.2
+W_RATING = 0.2
+W_HEADROOM = 0.2
+W_FRESHNESS = 0.2
 
 HEADROOM_CAP = 0.36          # M1 cap 36% -> headroom max(0, 0.36 - disc/100)
 FRESHNESS_LAMBDA_DAYS = 30   # freshness = exp(-Δdays/30)
-
 
 def _utcnow() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc)
