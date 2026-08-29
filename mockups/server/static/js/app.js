@@ -59,58 +59,9 @@
       const avgDaily = ad.length ? ad.reduce((a, b) => a + b, 0) / ad.length : 0;
       const nm = (r.product_name || "").toUpperCase();
       const isGift = nm.includes("QUÀ TẶNG KHÔNG BÁN") || nm.includes("QUA TANG KHONG BAN");
-      // line gợi ý từ tên được phân loại lại theo yêu cầu loại sản phẩm (không dùng tên riêng thương hiệu)
-      let line = "Khác";
-      const N = (r.product_name || "").normalize("NFC").toLowerCase();
-      if (
-        N.includes("quasure") ||
-        N.includes("ăn kiêng") ||
-        N.includes("không đường") ||
-        N.includes("ít đường") ||
-        N.includes("sugar free") ||
-        N.includes("no sugar") ||
-        N.includes("giảm đường") ||
-        N.includes("giảm 40% đường")
-      ) {
-        line = "Ăn kiêng / Ít đường";
-      } else if (
-        N.includes("bánh ăn sáng") ||
-        N.includes("bánh tươi olive") ||
-        N.includes("bánh mì") ||
-        N.includes("sandwich") ||
-        N.includes("chà bông") ||
-        N.includes("olive")
-      ) {
-        line = "Bánh ăn sáng";
-      } else if (
-        N.includes("kẹo") ||
-        N.includes("thạch") ||
-        N.includes("zoo") ||
-        N.includes("sumika") ||
-        N.includes("cheery") ||
-        N.includes("welly") ||
-        N.includes("migita") ||
-        N.includes("michoco") ||
-        N.includes("tứ quý")
-      ) {
-        line = "Kẹo";
-      } else if (
-        N.includes("bánh") ||
-        N.includes("gooka") ||
-        N.includes("hura") ||
-        N.includes("goody") ||
-        N.includes("jamy") ||
-        N.includes("cookies") ||
-        N.includes("cracker") ||
-        N.includes("bông lan") ||
-        N.includes("cuộn") ||
-        N.includes("swissroll") ||
-        N.includes("layercake") ||
-        N.includes("ngũ cốc") ||
-        N.includes("bột ngũ cốc")
-      ) {
-        line = "Bánh";
-      }
+      // Dòng sản phẩm phân loại dựa trên bảng product categories và category list
+      const catMap = DATA.category_map || {};
+      const line = r.line || catMap[iid] || "Khác";
 
       return {
         item_id: iid,
