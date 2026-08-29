@@ -16,6 +16,7 @@ import math
 from typing import Any, Dict, List, Optional
 
 from ._helpers import norm, to_float, ts_to_dt
+from .loader import is_gift_product
 
 # Trọng số đề bài (spec E: lấy từ docx, không tự chế).
 W_MS = 0.2
@@ -88,6 +89,8 @@ def hero_score(data_pool: List[Dict[str, Any]],
         score = round(
             W_MS * f["_ms"] + W_RC * f["_rc"] + W_RATING * f["_rating"]
             + W_HEADROOM * f["_headroom"] + W_FRESHNESS * f["_freshness"], 4)
+        if f["line"] == "Quà Tặng" or is_gift_product(f["name"]):
+            score = round(score * 0.05, 4)
         results.append({
             "item_id": f["item_id"],
             "name": f["name"],

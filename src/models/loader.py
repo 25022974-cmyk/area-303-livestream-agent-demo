@@ -44,12 +44,96 @@ REQUIRED_COLUMNS = [
     "date",
 ]
 
+PROMOTIONAL_CATEGORIES = [
+    r"sản\s*phẩm\s*mới",
+    r"san\s*pham\s*moi",
+    r"tất\s*cả\s*sản\s*phẩm",
+    r"tat\s*ca\s*san\s*pham",
+    r"top\s*bán\s*chạy",
+    r"sản\s*phẩm\s*bán\s*chạy",
+    r"bán\s*chạy",
+    r"best\s*seller",
+    r"siêu\s*sale",
+    r"mua\s*1\s*tặng\s*1",
+    r"ưu\s*đãi",
+    r"deal",
+    r"giảm\s*giá",
+    r"thùng\s*bánh",
+    r"bánh\s*kẹo\s*sỉ",
+    r"sỉ",
+    r"cuồng\s*nhiệt",
+    r"độc\s*quyền\s*online",
+    r"box\s*độc\s*quyền",
+    r"combo\s*mix",
+    r"combo\s*tết",
+    r"kinh\s*đô\s*tết",
+]
+
+_PROMO_REGEX = re.compile(r"|".join(PROMOTIONAL_CATEGORIES), re.IGNORECASE)
+
+_GIFT_REGEX = re.compile(
+    r"(\bquà\s*tặng\s*không\s*bán\b|\bhàng\s*tặng\s*không\s*bán\b|\bhàng\s*tặng\b|\[\s*quà\s*tặng|\[\s*gift\s*\]|\bquà\s*tặng\s*\||\bquà\s*tặng\s*-)",
+    re.IGNORECASE,
+)
+
+
+def is_promotional_category(cat_name: Optional[str]) -> bool:
+    """Kiểm tra xem danh mục có phải là danh mục quảng bá / khuyến mãi chung hay không."""
+    if not cat_name or str(cat_name).strip() in ("", "None", "nan", "Khác", "Other"):
+        return True
+    return bool(_PROMO_REGEX.search(str(cat_name)))
+
+
+def is_gift_product(product_name: Optional[str]) -> bool:
+    """Kiểm tra xem tên sản phẩm có phải là hàng quà tặng kèm không."""
+    if not product_name:
+        return False
+    name = str(product_name).strip()
+    if _GIFT_REGEX.search(name):
+        return True
+    lower = name.lower()
+    if lower.startswith("quà tặng") or lower.startswith("[quà tặng") or lower.startswith("(quà tặng") or lower.startswith("[gift"):
+        return True
+    if "quà tặng không bán" in lower or "quà tặng kèm" in lower or "hàng tặng" in lower:
+        return True
+    return False
+
+
+def _match_keywords_line(product_name: str) -> str:
+    """Fallback gán dòng sản phẩm theo từ khóa thương hiệu / nhóm ngành đặc trưng."""
+    name = str(product_name or "").lower()
+
+    # 1. Quasure / Không đường / Ăn kiêng tiểu đường
+    if "quasure" in name or "sugar free" in name or "không đường" in name:
+        return "Quasure Sugar Free"
+    # 2. Gooka / Nougat
+    if "gooka" in name or "nougat" in name:
+        return "Gooka Nougat Filling"
+    # 3. Kẹo Trẻ Em / Zoo / Thạch
+    if any(w in name for w in ["zoo", "cho bé", "trẻ em", "kem tuyết", "sâu kỳ thú", "sâu tuyết"]):
+        return "Kẹo Cho Bé"
+    # 4. Bánh ăn sáng / Bánh mì / Sandwich / Olive
+    if any(w in name for w in ["ăn sáng", "sandwich", "bông lan olive", "bánh tươi olive", "bánh mì", "castella"]):
+        return "Bánh Ăn Sáng"
+    # 5. Bánh dinh dưỡng / Ngũ cốc / Ăn kiêng
+    if any(w in name for w in ["dinh dưỡng", "ăn kiêng", "tiểu đường", "ngũ cốc"]):
+        return "Bánh Dinh Dưỡng"
+    # 6. Kẹo ăn vặt / Kẹo các loại
+    if any(w in name for w in ["sumika", "cheery", "welly", "migita", "tứ quý", "michoco", "kẹo dẻo", "kẹo mút", "kẹo cứng", "kẹo ngậm", "kẹo mềm", "kẹo thạch", "kẹo", "gum"]):
+        return "Kẹo Ăn Vặt"
+    # 7. Bánh ăn vặt / Bánh các loại
+    if any(w in name for w in ["hura", "goody", "jamy", "cookies", "bánh quy", "bánh cracker", "bánh bông lan", "bánh"]):
+        return "Bánh Ăn Vặt"
+
+    return "Khác"
+
+
 _LINE_PATTERNS = [
-    (re.compile(r"\b(zoo|em\s*b[eé]|kid|tr[eẻ]\s*em)\b", re.IGNORECASE), "Zoo"),
-    (re.compile(r"\b(quasure|sure|ti[eể]u\s*[dđ][uư][oờ]ng)\b", re.IGNORECASE), "Quasure"),
-    (re.compile(r"\b(gooka|b[aá]nh\s*quy|wafer)\b", re.IGNORECASE), "Gooka"),
-    (re.compile(r"\b(sumika|sumi|k[eẹ]o\s*d[eẻ]o)\b", re.IGNORECASE), "Sumika"),
-    (re.compile(r"\b(hura)\b", re.IGNORECASE), "Hura"),
+    (re.compile(r"\b(zoo|em\s*b[eé]|kid|tr[eẻ]\s*em)\b", re.IGNORECASE), "Kẹo Cho Bé"),
+    (re.compile(r"\b(quasure|sugar\s*free|ti[eể]u\s*[dđ][uư][oờ]ng)\b", re.IGNORECASE), "Quasure Sugar Free"),
+    (re.compile(r"\b(gooka|nougat)\b", re.IGNORECASE), "Gooka Nougat Filling"),
+    (re.compile(r"\b(sumika|cheery|welly|migita|tứ\s*quý|k[eẹ]o)\b", re.IGNORECASE), "Kẹo Ăn Vặt"),
+    (re.compile(r"\b(hura|goody|jamy|b[aá]nh)\b", re.IGNORECASE), "Bánh Ăn Vặt"),
 ]
 
 
@@ -61,19 +145,174 @@ class LoaderError(Exception):
         self.missing_columns = missing_columns or []
 
 
-def assign_product_line(product_name: str, catid: Any = None, total_distinct_catids: int = 1) -> str:
-    """Categorizes product into a product line using taxonomy or keyword heuristics."""
+def load_category_mapping(shop_id: Optional[str] = None, base_dir: Optional[Union[str, Path]] = None) -> Dict[str, str]:
+    """Đọc category_list.csv và product_categories.csv để tạo ánh xạ item_id -> display_name.
+    Ưu tiên bỏ qua các danh mục khuyến mãi/quảng bá chung nếu có danh mục cụ thể hơn."""
+    import os
+    candidate_roots = []
+    if base_dir:
+        candidate_roots.append(Path(base_dir))
+    mod_dir = Path(__file__).resolve().parent
+    candidate_roots.extend([
+        mod_dir.parent.parent / "mockups" / "Data" / "country_code=vn",
+        mod_dir.parent.parent / "Data" / "country_code=vn",
+        mod_dir.parent.parent / "data",
+    ])
+
+    root_found = None
+    for r in candidate_roots:
+        if (r / "dataset=category_list").is_dir() or (r / "dataset=product_categories").is_dir():
+            root_found = r
+            break
+
+    if not root_found:
+        return {}
+
+    # Đọc category_list.csv
+    cat_names: Dict[str, str] = {}
+    cat_list_dir = root_found / "dataset=category_list"
+    shop_subdirs = [f"shop_id={shop_id}"] if shop_id else ([p.name for p in cat_list_dir.iterdir() if p.is_dir()] if cat_list_dir.exists() else [])
+    for sdir in shop_subdirs:
+        p = cat_list_dir / sdir / "category_list.csv"
+        if p.is_file():
+            try:
+                cat_df = pd.read_csv(p, dtype=str)
+                for _, row in cat_df.iterrows():
+                    cid = row.get("shop_category_id")
+                    name = row.get("display_name")
+                    if pd.notna(cid) and pd.notna(name):
+                        cat_names[str(cid).strip()] = str(name).strip()
+            except Exception:
+                pass
+
+    # Đọc product_categories.csv -> thu thập tất cả categories cho từng item_id
+    item_all_cats: Dict[str, List[str]] = {}
+    prod_cat_dir = root_found / "dataset=product_categories"
+    p_shop_subdirs = [f"shop_id={shop_id}"] if shop_id else ([p.name for p in prod_cat_dir.iterdir() if p.is_dir()] if prod_cat_dir.exists() else [])
+    for sdir in p_shop_subdirs:
+        p = prod_cat_dir / sdir / "product_categories.csv"
+        if p.is_file():
+            try:
+                pc_df = pd.read_csv(p, dtype=str)
+                for _, row in pc_df.iterrows():
+                    iid = row.get("item_id")
+                    cid = row.get("category_id") or row.get("category_slug")
+                    if pd.notna(iid) and pd.notna(cid):
+                        iid_str = str(iid).strip()
+                        cid_str = str(cid).strip()
+                        cname = cat_names.get(cid_str, cid_str)
+                        if cname:
+                            item_all_cats.setdefault(iid_str, []).append(cname)
+            except Exception:
+                pass
+
+    # Ưu tiên chọn danh mục cụ thể (không phải khuyến mãi / quảng bá chung)
+    item_to_cat: Dict[str, str] = {}
+    for iid_str, cats in item_all_cats.items():
+        specific_cats = [c for c in cats if not is_promotional_category(c)]
+        if specific_cats:
+            item_to_cat[iid_str] = specific_cats[0]
+        elif cats:
+            item_to_cat[iid_str] = cats[0]
+
+    return item_to_cat
+
+
+def assign_product_line(
+    product_name: str,
+    catid: Any = None,
+    total_distinct_catids: int = 1,
+    item_id: Any = None,
+    category_mapping: Optional[Dict[str, str]] = None,
+    category_list: Optional[List[str]] = None,
+) -> str:
+    """Categorizes product into a product line:
+    1. Nếu tên sản phẩm là quà tặng -> 'Quà Tặng'
+    2. Nếu có trong product_categories (đã lọc bỏ promo) -> dùng danh mục đó
+    3. Fallback khớp tên sản phẩm theo tên danh mục trong category_list & từ khóa đặc trưng
+    Đảm bảo 100% SKU đều có dòng sản phẩm phù hợp.
+    """
+    name = str(product_name or "")
+
+    # 1. Hàng quà tặng
+    if is_gift_product(name):
+        return "Quà Tặng"
+
+    # 2. Khớp từ category_mapping nếu là danh mục cụ thể (không phải promo/Khác)
+    if category_mapping and item_id is not None:
+        iid_str = str(item_id).strip()
+        if iid_str in category_mapping:
+            cat = category_mapping[iid_str]
+            if cat and not is_promotional_category(cat) and cat not in ("Khác", "Other"):
+                return cat
+
+    # 3. Fallback khớp tên sản phẩm với danh mục trong category_list (loại bỏ promo)
+    name_lower = name.lower()
+    if category_list:
+        for cname in category_list:
+            if is_promotional_category(cname):
+                continue
+            cname_clean = str(cname).strip()
+            cname_lower = cname_clean.lower()
+            if cname_lower in name_lower:
+                return cname_clean
+            tokens = [t for t in re.split(r"\s+", cname_lower) if len(t) > 3 and t not in ("bánh", "kẹo", "tổng", "hợp", "thực", "phẩm")]
+            if tokens and all(t in name_lower for t in tokens):
+                return cname_clean
+
+    # 4. Fallback khớp theo từ khóa đặc trưng thương hiệu / ngành
+    matched_line = _match_keywords_line(name)
+    if matched_line and matched_line != "Khác":
+        return matched_line
+
     if total_distinct_catids > 1 and catid not in (None, "", "None", "nan"):
         return f"Cat_{catid}"
 
-    name = str(product_name or "")
-    for pattern, line_name in _LINE_PATTERNS:
-        if pattern.search(name):
-            return line_name
-    return "Other"
+    return "Bánh Ăn Vặt" if "bánh" in name_lower else ("Kẹo Ăn Vặt" if "kẹo" in name_lower else "Bánh Ăn Vặt")
 
 
-def load_products_dataframe(source: Union[str, Path, bytes, io.StringIO, io.BytesIO]) -> pd.DataFrame:
+def load_shop_category_list(shop_id: Optional[str] = None, base_dir: Optional[Union[str, Path]] = None) -> List[str]:
+    """Đọc category_list.csv để lấy danh sách tên các danh mục (loại bỏ danh mục trùng lặp/rỗng)."""
+    candidate_roots = []
+    if base_dir:
+        candidate_roots.append(Path(base_dir))
+    mod_dir = Path(__file__).resolve().parent
+    candidate_roots.extend([
+        mod_dir.parent.parent / "mockups" / "Data" / "country_code=vn",
+        mod_dir.parent.parent / "Data" / "country_code=vn",
+        mod_dir.parent.parent / "data",
+    ])
+
+    root_found = None
+    for r in candidate_roots:
+        if (r / "dataset=category_list").is_dir():
+            root_found = r
+            break
+
+    if not root_found:
+        return []
+
+    cat_list_dir = root_found / "dataset=category_list"
+    shop_subdirs = [f"shop_id={shop_id}"] if shop_id else ([p.name for p in cat_list_dir.iterdir() if p.is_dir()] if cat_list_dir.exists() else [])
+    display_names: List[str] = []
+    seen = set()
+    for sdir in shop_subdirs:
+        p = cat_list_dir / sdir / "category_list.csv"
+        if p.is_file():
+            try:
+                cat_df = pd.read_csv(p, dtype=str)
+                for name in cat_df.get("display_name", []):
+                    if pd.notna(name):
+                        name_str = str(name).strip()
+                        if name_str and name_str not in seen:
+                            seen.add(name_str)
+                            display_names.append(name_str)
+            except Exception:
+                pass
+    return display_names
+
+
+def load_products_dataframe(source: Union[str, Path, bytes, io.StringIO, io.BytesIO], category_mapping: Optional[Dict[str, str]] = None) -> pd.DataFrame:
     """Loads raw Shopee products data into a cleaned Pandas DataFrame."""
     try:
         if isinstance(source, (str, Path)) and (isinstance(source, Path) or Path(source).exists()):
@@ -118,9 +357,23 @@ def load_products_dataframe(source: Union[str, Path, bytes, io.StringIO, io.Byte
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
 
     # Line assignment
+    category_list = None
+    if not df.empty:
+        first_shop_id = str(df["shop_id"].iloc[0]).strip() if pd.notna(df["shop_id"].iloc[0]) else None
+        if category_mapping is None:
+            category_mapping = load_category_mapping(first_shop_id)
+        category_list = load_shop_category_list(first_shop_id)
+
     distinct_catids = df["catid"].dropna().replace("", None).nunique()
     df["line"] = df.apply(
-        lambda r: assign_product_line(r["product_name"], r.get("catid"), distinct_catids),
+        lambda r: assign_product_line(
+            r["product_name"],
+            r.get("catid"),
+            distinct_catids,
+            item_id=r.get("item_id"),
+            category_mapping=category_mapping,
+            category_list=category_list,
+        ),
         axis=1,
     )
 
