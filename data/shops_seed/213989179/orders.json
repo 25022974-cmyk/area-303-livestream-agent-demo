@@ -1,0 +1,122 @@
+[
+  {
+    "order_id": "ORD_1654323386",
+    "timestamp": "2026-08-29T16:54:32.338667+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654325419",
+    "timestamp": "2026-08-29T16:54:32.542155+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654327329",
+    "timestamp": "2026-08-29T16:54:32.733020+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654329553",
+    "timestamp": "2026-08-29T16:54:32.955392+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654331812",
+    "timestamp": "2026-08-29T16:54:33.181353+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654379366",
+    "timestamp": "2026-08-29T16:54:37.936759+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654380957",
+    "timestamp": "2026-08-29T16:54:38.095842+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654382703",
+    "timestamp": "2026-08-29T16:54:38.270417+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654384276",
+    "timestamp": "2026-08-29T16:54:38.427769+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1654386340",
+    "timestamp": "2026-08-29T16:54:38.634218+00:00",
+    "item_id": "17568700451",
+    "product_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+    "price": 38700.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": true
+  },
+  {
+    "order_id": "ORD_1943320237",
+    "timestamp": "2026-08-29T19:43:32.023893+00:00",
+    "item_id": "123",
+    "product_name": "Bánh Zoo",
+    "price": 50000.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": false
+  },
+  {
+    "order_id": "ORD_1944596898",
+    "timestamp": "2026-08-29T19:44:59.689941+00:00",
+    "item_id": "123",
+    "product_name": "Bánh Zoo",
+    "price": 50000.0,
+    "quantity": 1,
+    "combo_id": null,
+    "voucher_applied": false
+  }
+]

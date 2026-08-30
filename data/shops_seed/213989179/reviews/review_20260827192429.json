@@ -1,0 +1,14 @@
+{
+  "actual": [
+    {
+      "actual_sales": 9,
+      "estimated_sales": 10,
+      "item_id": "123",
+      "voucher_amount_used": 0,
+      "voucher_redeemed": false
+    }
+  ],
+  "date": "2026-08-28",
+  "session_id": "test_session_ai",
+  "shop_id": "213989179"
+}
