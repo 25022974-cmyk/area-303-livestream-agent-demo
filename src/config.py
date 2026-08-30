@@ -48,14 +48,15 @@ DATA_DIR = ROOT_DIR / "mockups" / "Data" / "country_code=vn"
 # local development this resolves to the original repo path data/shops.
 #
 # Resolution order:
-#   1. AREA303_STORAGE_DIR  — explicit override (tests / forced location)
-#   2. /tmp derived path     — when Vercel sets VERCEL_TMP at runtime
-#   3. ROOT / data / shops   — local development fallback
-_tmp_base = os.environ.get("VERCEL_TMP") or os.environ.get("TMPDIR")
+#   1. AREA303_STORAGE_DIR      — explicit override (tests / forced location)
+#   2. /tmp/area303_shops       — when running on Vercel (VERCEL env set)
+#                                (LAMBDA_TASK_ROOT is set on AWS Lambda / Vercel)
+#   3. ROOT / data / shops      — local development fallback
 if os.environ.get("AREA303_STORAGE_DIR"):
     STORAGE_DIR = Path(os.environ["AREA303_STORAGE_DIR"])
-elif _tmp_base:
-    STORAGE_DIR = Path(_tmp_base) / "area303_shops"
+elif os.environ.get("VERCEL") or os.environ.get("LAMBDA_TASK_ROOT"):
+    # On Vercel/Lambda /tmp is the only writable dir and is per-instance.
+    STORAGE_DIR = Path("/tmp") / "area303_shops"
 else:
     STORAGE_DIR = ROOT_DIR / "data" / "shops"
 
@@ -73,9 +74,16 @@ TEMPLATES_DIR = SRC_DIR / "templates"
 from .storage_sync import ensure_storage_seeded as _ensure_storage_seeded
 
 if not _is_inside(STORAGE_DIR, ROOT_DIR):
+    # Serverless: seed from committed snapshot into /tmp (writable).
+    # ensure_storage_seeded is best-effort and never raises.
     _ensure_storage_seeded(STORAGE_DIR, SEED_DIR)
 else:
-    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    # Local dev: ensure the working dir exists. Tolerate read-only filesystems
+    # (e.g. when the repo lives on a read-only mount) without crashing import.
+    try:
+        STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
 
 def _load_dotenv() -> None:
