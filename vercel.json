@@ -1,6 +1,11 @@
 {
-  "version": 2,
-  "builds": [{ "src": "api/index.py", "use": "@vercel/python" }],
+  "functions": {
+    "api/index.py": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "includeFiles": "mockups/**,data/**,src/**"
+    }
+  },
   "routes": [
     { "src": "/(.*).css", "dest": "/api/index.py" },
     { "src": "/(.*).js", "dest": "/api/index.py" },
