@@ -203,7 +203,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnAct = document.getElementById("btn-trigger-action");
     if (btnAct) {
       btnAct.addEventListener("click", () => {
-        AREA303.toast("⚡ Đã kích hoạt Flash Deal / Voucher lên màn hình livestream!", "success");
+        AREA303.toast("⚡ Đã kích hoạt Flash Deal / Voucher lên livestream!", "success");
       });
     }
   }

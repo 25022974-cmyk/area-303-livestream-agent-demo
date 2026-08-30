@@ -18,6 +18,8 @@
 from typing import Any, Dict, List, Optional
 
 from ..models.pipeline import run_pipeline
+from .ai_service import is_ai_configured, suggest_timeslot
+from .session_service import session_service
 from .shop_service import shop_service
 
 
@@ -73,6 +75,36 @@ class PipelineService:
             learning_state=learning_state,
             snapshots=industry_snapshots,
         )
+
+        # Augment M3 timeslot with an AI suggestion built from past-session logs.
+        # This is best-effort: it never overrides the heuristic start/end hours
+        # (which drive the time inputs + heatmap) — it only adds advice text.
+        try:
+            ts_block = result.get("m3_timeslot") if isinstance(result, dict) else None
+            if isinstance(ts_block, dict):
+                past_ctx = session_service.build_timeslot_ai_context(shop_id, max_sessions=12)
+                n_sessions = int(past_ctx.get("n_sessions", 0) or 0)
+                ai_configured = is_ai_configured()
+                # Only ask the AI when there is real history to reason from.
+                # Without logs, an AI answer would be a hallucinated guess.
+                ai_advice = None
+                if n_sessions > 0 and ai_configured:
+                    industry_evidence = (ts_block.get("evidence") or {}) if isinstance(ts_block.get("evidence"), dict) else None
+                    ai_advice = suggest_timeslot(
+                        shop_id=shop_id,
+                        past_context=past_ctx,
+                        industry_signal=industry_evidence,
+                    )
+                ts_block["ai_advice"] = ai_advice
+                ts_block["ai_advice_source"] = {
+                    "n_sessions": n_sessions,
+                    "n_sessions_co_review": int(past_ctx.get("n_sessions_co_review", 0) or 0),
+                    "available": n_sessions > 0,
+                    "ai_configured": ai_configured,
+                }
+        except Exception:
+            # AI timeslot advice must never break the pipeline.
+            pass
 
         return result
 

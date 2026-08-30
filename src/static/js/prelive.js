@@ -311,13 +311,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderTimeslotSection() {
     const ts = pipelineData?.m3_timeslot || {};
-    if (timeslotReasonEl) timeslotReasonEl.textContent = ts.reason || "Khung giờ vàng dựa trên tín hiệu livestream ngành.";
+    if (timeslotReasonEl) {
+      timeslotReasonEl.textContent = composeTimeslotReason(ts);
+    }
     if (peakHourLabel && ts.evidence?.peak_hour !== undefined) {
       peakHourLabel.textContent = `Đỉnh cao điểm: ${ts.evidence.peak_hour}:00`;
     }
 
     updateDuration();
     renderHeatmap();
+  }
+
+  // Gộp lý do voucher ngành (M3 heuristic) với lời khuyên AI đọc từ log
+  // các phiên live cũ. Khi AI chưa cấu hình / chưa đủ log → thông báo nhẹ
+  // và lùi về lý do heuristic, không ph vỡ giao diện.
+  function composeTimeslotReason(ts) {
+    const base = ts.reason || "Khung giờ vàng dựa trên tín hiệu livestream ngành.";
+    const advice = ts.ai_advice;
+    const src = ts.ai_advice_source;
+
+    if (!advice) {
+      if (src && src.ai_configured === false) {
+        return base + " (AI chưa cấu hình — đang dùng gợi ý voucher ngành.)";
+      }
+      if (src && (!src.available || !src.n_sessions)) {
+        return base + " (Chưa có log phiên live cũ để AI học.)";
+      }
+      // AI configured + có log nhưng gọi thất bại → giữ nguyên, không loan tin sai.
+      return base;
+    }
+    const n = (src && src.n_sessions) ? src.n_sessions : 0;
+    return `${base}\n\n🕘 Gợi ý từ lịch sử ${n} phiên live: ${advice}`;
   }
 
   function renderHeatmap() {

@@ -177,16 +177,16 @@ def suggest_next_slot(*, shop_id: str, draft: Dict[str, Any],
     }
 
     system = (
-        "Ban la tro ly livestream ban keo/thuc pham (AREA_303). "
-        "Khi mot slot vua ket thuc, dua vao log don hang cua slot do va xu huong "
-        "trong so hoc may (alpha/beta/MAPE), hay dua ra goi y NHANH, ngan gon de "
-        "doc on-air cho slot tiep theo: san pham/voucher/combo nen tung, kem "
-        "kich ban chot deal 1-2 cau. Toi da ~900 ky tu, tieng Viet, khong viet "
-        "markdown nang (khong dung dau #)."
+        "Bạn là trợ lý livestream bán kẹo/thực phẩm (AREA_303) với cách nói chuyên nghiệp  "
+        "nhưng thiên hướng buisiness .Khi một phiên live vừa kết thúc, dựa vào xu hướng "
+        "trong mô hình học máy (alpha/beta/MAPE), hãy đưa ra gợi ý NHANH, ngắn gọn để "
+        "đọc on-air cho phiên livestream tiếp theo: sản phẩm/voucher/combo nên tung, kèm "
+        "kịch bản chốt deal 1-2 câu. Tối đa ~900 ký tự, tiếng Việt có dấu, không viết "
+        "markdown nặng (không dùng dấu #)."
     )
     user = (
-        "Phiên live vua ket thuc 1 slot. Theo doi log va xu huong trong so roi "
-        "goi y cho slot ke tiep. Du lieu JSON:\n"
+        "Phiên live vừa kết thúc 1 slot. Theo dõi log va xu hướng trọng số rồi "
+        "đưa ra nhận xét cho sản phẩm vừa rồi và gợi ý cho slot kế tiếp. Dữ liệu JSON:\n"
         + json.dumps(ctx, ensure_ascii=False)
     )
 
@@ -278,6 +278,55 @@ def review_post_live(*, shop_id: str, feedback_payload: Dict[str, Any],
             [{"role": "user", "content": user}],
             system=system,
             temperature=0.5,
+        )
+    except AIClientError:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Pre-live timeslot suggestion (from past-session logs)
+# ---------------------------------------------------------------------------
+
+def suggest_timeslot(*, shop_id: str, past_context: Dict[str, Any],
+                     industry_signal: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """Text suggestion for the optimal livestream window for an upcoming session.
+
+    Reads the shop's past-session logs (playbooks + reviews + learning trend),
+    aggregated by time slot, and reasons about which window historically
+    converted best. Returns None if AI not configured / call fails.
+    """
+    if not is_ai_configured():
+        return None
+
+    ctx = dict(past_context or {})
+    if industry_signal:
+        ctx["tin_hieu_nganh"] = {
+            "peak_hour": industry_signal.get("peak_hour"),
+            "kinh_do_windows": industry_signal.get("kinh_do_windows"),
+        }
+
+    system = (
+        "Ban la chuyen gia toi uu khung gio livestream ban keo/thuc pham (AREA_303). "
+        "Ban duoc cho doc toan bo log hieu qua thuc te cua cac phien live da chay cua "
+        "shop (doanh so thuc, ti le redeem voucher, combo ban ra, MAPE moi khung gio). "
+        "Dua vao do, hay de xuat MOT khung gio cu the (start–end) cho phien live moi kem "
+        "ly do ngan 2-4 cau: chi ro khung gio tung ra don tot nhat va khung gio nen "
+        "tranh. Neu tin hieu nganh (peak voucher) khac voi lich su cua shop, hay can "
+        "nhac ca hai. Tieng Viet co dau, ~600 ky tu, khong viet markdown nang "
+        "(khong dung dau #)."
+    )
+    user = (
+        "Day la tong hop log cac phien live da chay cua shop. Phan tich khung gio nao "
+        "ra don tot nhat dua tren doanh thuc/redeem/combo/MAPE, roi de xuat khung gio "
+        "cho phien moi. Du lieu JSON:\n"
+        + json.dumps(ctx, ensure_ascii=False)
+    )
+
+    try:
+        return chat(
+            [{"role": "user", "content": user}],
+            system=system,
+            temperature=0.4,
         )
     except AIClientError:
         return None
