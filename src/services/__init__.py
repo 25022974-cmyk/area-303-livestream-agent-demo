@@ -18,5 +18,6 @@
 from .shop_service import shop_service
 from .session_service import session_service
 from .pipeline_service import pipeline_service
+from .dashboard_service import dashboard_service
 
-__all__ = ["shop_service", "session_service", "pipeline_service"]
+__all__ = ["shop_service", "session_service", "pipeline_service", "dashboard_service"]

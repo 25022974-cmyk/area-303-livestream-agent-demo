@@ -1,0 +1,371 @@
+<!--
+  Copyright (C) 2026 Nguyen The Viet, Vu Thi Mai Anh, Do Huu An Phu, Phan Thuy Tram
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+{% extends "base.html" %}
+
+{% block title %}Quản Lý Dữ Liệu Tạo Lập · AREA_303{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+  <!-- Header Banner -->
+  <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-left: 4px solid var(--brand-accent);">
+    <div>
+      <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+        <h1 style="font-size: 1.25rem; font-weight: 800; color: var(--text);">
+          📊 Quản Lý Dữ Liệu Tạo Lập
+        </h1>
+        <span class="badge" style="background: var(--brand-soft); color: var(--brand);">{{ active_shop.shop_name }} ({{ shop_id }})</span>
+      </div>
+      <p style="font-size: 0.8125rem; color: var(--muted); margin: 0;">
+        Giám sát, xem chi tiết, chỉnh sửa và dọn dẹp các tệp dữ liệu phát sinh qua các phiên live (Playbooks, Đơn hàng On-air, Trạng thái Học máy, Reviews).
+      </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <button id="btn-refresh-dashboard" class="btn btn-secondary btn-sm">
+        ↻ Làm Mới
+      </button>
+      <a href="{{ url_for('ui.prelive', shop_id=shop_id) }}" class="btn btn-primary btn-sm">
+        + Lập Phiên Live
+      </a>
+    </div>
+  </div>
+
+  <!-- Top KPI Metric Cards -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Tổng Tệp & Dung Lượng</div>
+      <div class="stat-val" id="kpi-total-files">-</div>
+      <div class="stat-sub" id="kpi-total-bytes">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Playbook Hiện Hành</div>
+      <div class="stat-val" id="kpi-draft-status" style="color: var(--brand-accent); font-size: 1.125rem;">-</div>
+      <div class="stat-sub" id="kpi-draft-sub">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Đơn Hàng On-air</div>
+      <div class="stat-val" id="kpi-orders-count" style="color: var(--ok);">-</div>
+      <div class="stat-sub" id="kpi-orders-gmv">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Trọng Số Học Máy</div>
+      <div class="stat-val" id="kpi-learner-weights" style="color: var(--purple); font-size: 1.125rem;">-</div>
+      <div class="stat-sub" id="kpi-learner-sessions">-</div>
+    </div>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="card" style="padding: 0.5rem;">
+    <div class="tab-bar" id="dashboard-tabs" style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; flex-wrap: wrap;">
+      <button class="btn btn-sm tab-btn active" data-tab="tab-playbooks">
+        📑 Playbooks (<span id="tab-playbook-badge">0</span>)
+      </button>
+      <button class="btn btn-sm tab-btn btn-secondary" data-tab="tab-orders">
+        🛒 Đơn Hàng On-air (<span id="tab-orders-badge">0</span>)
+      </button>
+      <button class="btn btn-sm tab-btn btn-secondary" data-tab="tab-learner">
+        🧠 Trạng Thái Học Máy
+      </button>
+      <button class="btn btn-sm tab-btn btn-secondary" data-tab="tab-reviews">
+        📊 Báo Cáo Reviews (<span id="tab-reviews-badge">0</span>)
+      </button>
+      <button class="btn btn-sm tab-btn btn-secondary" data-tab="tab-purge" style="color: var(--danger);">
+        ⚠️ Dọn Dẹp Dữ Liệu
+      </button>
+    </div>
+
+    <!-- TAB 1: PLAYBOOKS -->
+    <div id="tab-playbooks" class="tab-content" style="padding: 1rem 0.5rem 0.5rem 0.5rem;">
+      <!-- Active Draft Section -->
+      <div style="margin-bottom: 1.5rem;">
+        <h2 class="section-h" style="margin-bottom: 0.75rem;">
+          <span class="step-badge">1</span> Playbook Bản Nháp Hiện Hành (draft_playbook.json)
+        </h2>
+        <div id="draft-card" class="card" style="background: #f8fafc; border: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div id="draft-details">
+            <div style="font-weight: 700; font-size: 0.9375rem; color: var(--text);" id="draft-slot-text">Đang tải...</div>
+            <div style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;" id="draft-meta-text">-</div>
+          </div>
+          <div style="display: flex; gap: 0.5rem;" id="draft-actions">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Archived Playbooks List -->
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <h2 class="section-h">
+            <span class="step-badge">2</span> Lịch Sử Playbooks Đã Lưu (playbooks/)
+          </h2>
+          <span class="badge" style="background: var(--brand-soft); color: var(--brand);" id="archived-count-badge">0 bản ghi</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 240px;">Tên Tệp</th>
+                <th>Khung Giờ</th>
+                <th style="text-align: center;">Số SKU</th>
+                <th style="text-align: center;">Số Combo</th>
+                <th style="text-align: right;">Dung Lượng</th>
+                <th style="text-align: right; width: 220px;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="playbooks-table-body">
+              <tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 1.5rem;">Đang tải danh sách playbooks...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: ORDERS -->
+    <div id="tab-orders" class="tab-content" style="display: none; padding: 1rem 0.5rem 0.5rem 0.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 class="section-h">
+            <span class="step-badge">🛒</span> Nhật Ký Đơn Hàng On-air (orders.json)
+          </h2>
+          <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">
+            Được ghi nhận trực tiếp từ giao diện On-air hoặc API. Bạn có thể chỉnh sửa số lượng, giá bán hoặc xóa đơn lỗi.
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="btn-export-orders-json" class="btn btn-secondary btn-sm">
+            📥 Xuất JSON
+          </button>
+          <button id="btn-clear-all-orders" class="btn btn-danger btn-sm">
+            🗑 Xóa Toàn Bộ Đơn
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 140px;">Mã Đơn</th>
+              <th>Tên Sản Phẩm</th>
+              <th style="text-align: right;">Đơn Giá</th>
+              <th style="text-align: center; width: 100px;">Số Lượng</th>
+              <th style="text-align: right;">Thành Tiền</th>
+              <th style="text-align: right; width: 150px;">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="orders-table-body">
+            <tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 1.5rem;">Đang tải danh sách đơn hàng...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: LEARNER -->
+    <div id="tab-learner" class="tab-content" style="display: none; padding: 1rem 0.5rem 0.5rem 0.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 class="section-h">
+            <span class="step-badge">🧠</span> Tham Số Học Máy Online Learner (learning_state.json)
+          </h2>
+          <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">
+            Điều chỉnh trọng số nhạy cảm giảm giá (Alpha) và nhạy cảm điều kiện chi tiêu (Beta), hoặc reset về giá trị ban đầu.
+          </div>
+        </div>
+        <button id="btn-reset-learner" class="btn btn-danger btn-sm">
+          ↺ Đặt Lại Mặc Định (Alpha=0.5, Beta=0.2)
+        </button>
+      </div>
+
+      <!-- Parameter Adjustment Form -->
+      <div class="card" style="background: #f8fafc; margin-bottom: 1.5rem; padding: 1.25rem;">
+        <div style="font-weight: 700; margin-bottom: 0.75rem; color: var(--text);">Điều Chỉnh Thủ Công Trọng Số:</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: flex-end;">
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 4px;">
+              Alpha (Độ nhạy giảm giá [0.1 - 1.0]):
+            </label>
+            <input type="number" step="0.01" min="0.1" max="1.0" id="input-learner-alpha" class="form-input" style="font-weight: 700;">
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 4px;">
+              Beta (Độ nhạy min spend [0.05 - 0.5]):
+            </label>
+            <input type="number" step="0.01" min="0.05" max="0.5" id="input-learner-beta" class="form-input" style="font-weight: 700;">
+          </div>
+          <div>
+            <button id="btn-save-learner-params" class="btn btn-primary" style="width: 100%;">
+              💾 Lưu Cập Nhật Trọng Số
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Learner History -->
+      <div>
+        <h3 style="font-size: 0.9375rem; font-weight: 700; margin-bottom: 0.5rem;">Lịch Sử Các Lần Cập Nhật Học Máy:</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Mã Phiên</th>
+                <th>Ngày</th>
+                <th style="text-align: right;">Sai Số MAPE</th>
+                <th style="text-align: center;">Alpha Sau Cập Nhật</th>
+                <th style="text-align: center;">Beta Sau Cập Nhật</th>
+              </tr>
+            </thead>
+            <tbody id="learner-history-body">
+              <tr><td colspan="5" style="text-align: center; color: var(--muted); padding: 1rem;">Chưa có lịch sử học phiên nào.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: REVIEWS -->
+    <div id="tab-reviews" class="tab-content" style="display: none; padding: 1rem 0.5rem 0.5rem 0.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <h2 class="section-h">
+            <span class="step-badge">📊</span> Lịch Sử Báo Cáo Đánh Giá Post-live (reviews/)
+          </h2>
+          <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">
+            Các báo cáo tổng kết phiên live được lưu tự động sau khi gửi phản hồi thực tế tại Post-live.
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 240px;">Tên Tệp</th>
+              <th>Mã Phiên (Session ID)</th>
+              <th>Ngày</th>
+              <th style="text-align: center;">Số SKU Đánh Giá</th>
+              <th style="text-align: right;">Dung Lượng</th>
+              <th style="text-align: right; width: 160px;">Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="reviews-table-body">
+            <tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 1.5rem;">Đang tải danh sách reviews...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 5: PURGE -->
+    <div id="tab-purge" class="tab-content" style="display: none; padding: 1.5rem 0.5rem 0.5rem 0.5rem;">
+      <div class="card" style="border: 1px solid var(--danger-border); background: #fef2f2; padding: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <span style="font-size: 1.5rem;">⚠️</span>
+          <div>
+            <div style="font-weight: 800; font-size: 1.0625rem; color: var(--danger);">Vùng Nguy Hiểm: Dọn Dẹp Dữ Liệu Tạm Của Shop</div>
+            <div style="font-size: 0.8125rem; color: #991b1b; margin-top: 2px;">
+              Xóa sạch các tệp dữ liệu phát sinh trong quá trình chạy thử nghiệm cho shop <strong style="color: var(--brand);">{{ active_shop.shop_name }}</strong> (ID: {{ shop_id }}).
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #ffffff; border: 1px solid var(--line); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="font-size: 0.8125rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text);">Hành động này sẽ:</div>
+          <ul style="font-size: 0.8125rem; color: var(--muted); margin: 0; padding-left: 1.25rem; line-height: 1.6;">
+            <li>Xóa tệp bản nháp hiện tại (<code style="color: var(--brand); font-weight: 600;">draft_playbook.json</code>)</li>
+            <li>Xóa toàn bộ đơn hàng mô phỏng đã ghi nhận (<code style="color: var(--brand); font-weight: 600;">orders.json</code>)</li>
+            <li>Xóa toàn bộ bản sao lưu trong thư mục <code style="color: var(--brand); font-weight: 600;">playbooks/</code></li>
+            <li>Xóa toàn bộ báo cáo đánh giá trong thư mục <code style="color: var(--brand); font-weight: 600;">reviews/</code></li>
+            <li>Đặt lại trạng thái học máy <code style="color: var(--brand); font-weight: 600;">learning_state.json</code> về mặc định ban đầu</li>
+            <li><strong>Lưu ý:</strong> Dữ liệu gốc sản phẩm (CSV trong <code style="color: var(--ok); font-weight: 600;">data/</code> hoặc mockup) sẽ <em>không</em> bị xóa.</li>
+          </ul>
+        </div>
+
+        <button id="btn-purge-shop" class="btn btn-danger" style="font-weight: 700;">
+          🗑 Xóa Toàn Bộ Dữ Liệu Phát Sinh Của Shop Này
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal: Inspect JSON -->
+<div id="modal-json-viewer" class="modal-backdrop" style="display: none;">
+  <div class="modal-box" style="max-width: 44rem; max-height: 85vh; display: flex; flex-direction: column;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem;">
+      <h3 style="font-weight: 800; font-size: 1rem; color: var(--text); margin: 0;" id="modal-json-title">Chi Tiết Tệp Dữ Liệu</h3>
+      <button class="btn btn-ghost btn-sm modal-close-btn" style="font-size: 1.25rem; padding: 0 6px;">✕</button>
+    </div>
+    <div style="flex: 1; overflow-y: auto; background: #0f172a; color: #f8fafc; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.8125rem;">
+      <pre id="modal-json-content" style="margin: 0; white-space: pre-wrap; word-break: break-all;"></pre>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid var(--line);">
+      <button id="btn-copy-modal-json" class="btn btn-secondary btn-sm">📋 Sao Chép JSON</button>
+      <button class="btn btn-primary btn-sm modal-close-btn">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Edit Order -->
+<div id="modal-edit-order" class="modal-backdrop" style="display: none;">
+  <div class="modal-box" style="max-width: 28rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem;">
+      <h3 style="font-weight: 800; font-size: 1rem; color: var(--text); margin: 0;">Chỉnh Sửa Đơn Hàng</h3>
+      <button class="btn btn-ghost btn-sm modal-close-btn" style="font-size: 1.25rem; padding: 0 6px;">✕</button>
+    </div>
+    <input type="hidden" id="edit-order-id">
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+      <div>
+        <label style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 4px;">Mã đơn hàng:</label>
+        <div id="edit-order-id-display" style="font-weight: 700; font-size: 0.875rem; color: var(--brand-accent);">-</div>
+      </div>
+      <div>
+        <label style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 4px;">Tên sản phẩm:</label>
+        <input type="text" id="edit-order-name" class="form-input" style="padding: 6px 8px;">
+      </div>
+      <div>
+        <label style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 4px;">Đơn giá (₫):</label>
+        <input type="number" id="edit-order-price" class="form-input" style="padding: 6px 8px;">
+      </div>
+      <div>
+        <label style="font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 4px;">Số lượng:</label>
+        <input type="number" min="1" id="edit-order-qty" class="form-input" style="padding: 6px 8px;">
+      </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid var(--line); padding-top: 0.75rem;">
+      <button class="btn btn-secondary btn-sm modal-close-btn">Hủy</button>
+      <button id="btn-save-edit-order" class="btn btn-primary btn-sm">💾 Lưu Thay Đổi</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirm Action -->
+<div id="modal-confirm" class="modal-backdrop" style="display: none;">
+  <div class="modal-box" style="max-width: 24rem; text-align: center; padding: 1.5rem;">
+    <div style="font-size: 2rem; margin-bottom: 0.5rem;" id="confirm-icon">⚠️</div>
+    <h3 style="font-weight: 800; font-size: 1.125rem; color: var(--text); margin-bottom: 0.5rem;" id="confirm-title">Xác Nhận Hành Động</h3>
+    <p style="font-size: 0.8125rem; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5;" id="confirm-message">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
+    <div style="display: flex; justify-content: center; gap: 0.75rem;">
+      <button class="btn btn-secondary modal-close-btn" id="btn-confirm-cancel">Hủy Bỏ</button>
+      <button class="btn btn-danger" id="btn-confirm-ok">Đồng Ý Thực Hiện</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
