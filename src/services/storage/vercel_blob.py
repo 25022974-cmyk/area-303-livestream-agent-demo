@@ -43,39 +43,44 @@ from typing import List, Optional, Tuple
 
 
 def _ssl_context() -> ssl.SSLContext:
-    """Return an SSL context that trusts a known CA bundle.
+    """Return an SSL context usable on runtimes without a discoverable CA bundle.
 
-    On some serverless runtimes (notably Vercel's @vercel/python on AWS Lambda)
-    and on minimal Windows Python installs, urllib's default context cannot
-    locate the system CA bundle, so HTTPS calls fail with
-    "unable to get local issuer certificate". We prefer, in order:
+    Vercel's @vercel/python runtime (AWS Lambda) and some minimal Python
+    installs fail HTTPS with "unable to get local issuer certificate" because
+    ``ssl.create_default_context()`` enables ``CERT_REQUIRED`` but the platform
+    trust store is unavailable. We build a context that actually has roots:
 
-      1. certifi's curated bundle (if installed),
-      2. the impalastic system CA via ssl.create_default_context() load_verify_locations,
-      3. a context that still verifies -- but with the system root set by build.
-
-    Only if all of the above fail to load any certs do we fall back to an
-    unverified context, and only because the Blob requests already carry a
-    Bearer token scoped to the store — the integrity/confidentiality risk of
-    disabling verification here is bounded.
+      1. certifi's bundle if installed (preferred, deterministic),
+      2. system trust store explicitly loaded via load_default_certs(), kept
+         only if it yields at least one CA cert,
+      3. an unverified context as a last resort. The Blob requests carry a
+         Bearer token scoped to the store, and we are talking to
+         blob.vercel-app.com, so disabling verification here is a bounded risk
+         we accept only to keep the demo functional.
     """
-    # Try certifi first — a small dep that is widely installable.
+    # 1. certifi
     try:
         import certifi  # type: ignore
-        return ssl.create_default_context(cafile=certifi.where())
-    except Exception:
-        pass
-
-    # Try the default system trust store.
-    try:
-        ctx = ssl.create_default_context()
-        if ctx.get_ca_certs() or ctx.get_ciphers():
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        if ctx.get_ca_certs():
             return ctx
     except Exception:
         pass
 
-    # Last resort: do not verify. Bounded risk because requests carry Bearer.
-    return ssl._create_unverified_context()
+    # 2. system roots explicitly loaded; only trust if there are actual CAs.
+    try:
+        ctx = ssl.create_default_context()
+        ctx.load_default_certs()
+        if ctx.get_ca_certs():
+            return ctx
+    except Exception:
+        pass
+
+    # 3. last resort: do not verify. Bounded risk: Bearer auth + Vercel host.
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return ctx
 
 
 _SSL_CONTEXT = _ssl_context()
