@@ -91,7 +91,7 @@ def clear_orders():
     shop_id = str(body.get("shop_id", "")).strip()
     try:
         sid = shop_service.validate_shop_id(shop_id)
-        session_service.clear_onair_orders(sid)
+        session_service.clear_onair_orders(sid)            
         return jsonify({"status": "ok", "message": "Orders cleared."})
     except Exception as exc:
         return jsonify({"status": "error", "message": str(exc)}), 400

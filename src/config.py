@@ -47,6 +47,12 @@ else:
 STATIC_DIR = SRC_DIR / "static"
 TEMPLATES_DIR = SRC_DIR / "templates"
 
+# Vercel Blob credentials. When the Blob store is created in the Vercel project,
+# Vercel injects BLOB_READ_WRITE_TOKEN (and optionally BLOB_STORE_URL) into the
+# runtime env. We keep them here so storage backends can pick them up.
+BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN", "")
+BLOB_STORE_URL = os.environ.get("BLOB_STORE_URL", "")
+
 
 def _load_dotenv() -> None:
     """Loads simple KEY=VALUE pairs from a .env file into os.environ (stdlib only).

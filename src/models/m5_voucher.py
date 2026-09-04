@@ -45,7 +45,7 @@ def calculate_estimated_sales(
     min_spend = max(0.0, voucher_min_spend)
 
     # Customer attraction equation
-    factor = (1.0 / 30) + alpha * (total_savings / price_original) - beta * (min_spend / 200_000.0)
+    factor = 1.0 + alpha * (total_savings / price_original) - beta * (min_spend / 200_000.0)
     factor = max(0.0, factor)       # factor là nhân tố tăng/giảm nhu cầu khách hàng dựa trên mức giảm giá và điều kiện sử dụng voucher
     return ms * factor
 
@@ -72,7 +72,7 @@ def optimize_voucher_budget(
     alpha: float = 0.5,
     beta: float = 0.2,
     gift_cost: float = 0.0,
-    must_select_all: bool = False,
+    must_select_all: bool = True,
 ) -> Dict[str, Any]:
     """
     Hàm tối ưu hóa việc phân bổ voucher cho các SKU dựa trên ngân sách, chi phí quà tặng, và các thông số alpha, beta.
@@ -222,7 +222,7 @@ def optimize_voucher_budget(
             "voucher_amount": pick["voucher_disc"],
             "min_spend": pick["min_spend"],
             "price_final": pick["price_final"],
-            "expected_sales": round(pick["est_sales"]),
+            "expected_sales": round(pick["est_sales"], 1),
             "voucher_cost": round(cost_v),
             "is_selected": pick["voucher_disc"] > 0 or pick["discount_pct"] > 0,
         })

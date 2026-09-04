@@ -2,22 +2,30 @@
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# the Free Software Foundation, either version 3 of the License, or (at
+# your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with
+# this program. If not, see <https://www.gnu.org/licenses/>.
 
-"""Shop service managing multi-shop data, isolation, configurations, and datasets."""
+"""Shop service managing multi-shop data, isolation, configurations, and datasets.
+
+The service is storage-backend agnostic: per-shop writable state (uploaded CSVs,
+``config.json``, ``learning_state.json``) is delegated to a ``StorageBackend``
+chosen by env (filesystem locally, Vercel Blob on serverless). Read-only
+benchmark data under ``DATA_DIR`` is still read straight from disk. Routes and
+callers see the same public API regardless of backend.
+"""
 
 import datetime
 import json
+import os
 import re
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -35,6 +43,7 @@ from ..config import (
 )
 from ..models.learner import default_learning_state
 from ..models.loader import build_observations_from_snapshots, load_csv_data
+from .storage import get_storage_backend
 
 _SHOP_ID_RE = re.compile(r"^\d+$")
 
@@ -45,6 +54,7 @@ class ShopService:
     def __init__(self):
         self.storage_dir = STORAGE_DIR
         self.data_dir = DATA_DIR
+        self.backend = get_storage_backend()
 
     def validate_shop_id(self, shop_id: str) -> str:
         """Validates numeric shop ID to prevent path traversal."""
@@ -53,10 +63,20 @@ class ShopService:
             raise ValueError(f"Invalid shop_id: '{shop_id}'. Must be numeric string.")
         return sid
 
+    # Note: legacy per-shop filesystem dir kept for LocalFilesystemBackend and
+    # for ad-hoc callers/tests that may still expect a directory path. On the
+    # Blob backend this directory is only used as a scratch /tmp cache.
     def get_shop_dir(self, shop_id: str) -> Path:
-        """Returns isolated storage directory for a specific shop."""
+        """Returns local (filesystem) directory for a specific shop.
+
+        On the Blob backend this is a scratch dir under /tmp used only as a
+        download cache for pandas; it is NOT the source of truth.
+        """
         sid = self.validate_shop_id(shop_id)
-        d = self.storage_dir / sid
+        if self.backend.name == "local":
+            d = self.storage_dir / sid
+        else:
+            d = Path(tempfile.gettempdir()) / "area303_shops" / sid
         (d / "data").mkdir(parents=True, exist_ok=True)
         (d / "playbooks").mkdir(parents=True, exist_ok=True)
         return d
@@ -84,21 +104,27 @@ class ShopService:
 
             shops.append(info)
 
-        # 2. Check storage_dir for additional user-uploaded custom shops
-        if self.storage_dir.exists():
-            for child in self.storage_dir.iterdir():
-                if child.is_dir() and _SHOP_ID_RE.match(child.name) and child.name not in PRELOADED_SHOPS:
-                    cfg = self.load_shop_config(child.name)
-                    shops.append({
-                        "shop_id": child.name,
-                        "shop_name": cfg.get("shop_name", f"Custom Shop #{child.name}"),
-                        "username": f"custom_shop_{child.name}",
-                        "is_default": False,
-                        "category": "Custom Uploaded Shop",
-                        "badge": "Custom",
-                        "brand_color": "#475569",
-                        "item_count": cfg.get("item_count", 0),
-                    })
+        # 2. Check backend for additional user-uploaded custom shops
+        try:
+            custom_ids = self.backend.list_shops()
+        except Exception:
+            custom_ids = []
+        for sid in custom_ids:
+            if sid in PRELOADED_SHOPS:
+                continue
+            if not _SHOP_ID_RE.match(sid):
+                continue
+            cfg = self.load_shop_config(sid)
+            shops.append({
+                "shop_id": sid,
+                "shop_name": cfg.get("shop_name", f"Custom Shop #{sid}"),
+                "username": f"custom_shop_{sid}",
+                "is_default": False,
+                "category": "Custom Uploaded Shop",
+                "badge": "Custom",
+                "brand_color": "#475569",
+                "item_count": cfg.get("item_count", 0),
+            })
 
         return shops
 
@@ -119,46 +145,83 @@ class ShopService:
         }
 
     def get_shop_data_path(self, shop_id: str) -> Optional[Path]:
-        """Locates the latest products CSV for a shop."""
+        """Locates the latest products CSV for a shop as a local Path.
+
+        Returns a Path that ``load_csv_data``/pandas can read directly. The
+        returned path is either:
+          - the on-disk uploaded file (local backend), or
+          - a benchmark CSV shipped in the repo (DATA_DIR), or
+          - a /tmp scratch file downloaded from the Blob backend (cached for
+            the lifetime of the instance).
+        """
         sid = self.validate_shop_id(shop_id)
 
-        # Check uploaded files first in shop storage
-        shop_d = self.get_shop_dir(sid)
-        custom_files = sorted((shop_d / "data").glob("products_*.csv"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if custom_files:
-            return custom_files[0]
+        # Uploaded files first (via backend)
+        csvs = []
+        try:
+            csvs = self.backend.list_csvs(sid)
+        except Exception:
+            csvs = []
+        if csvs:
+            newest_name, _mtime = csvs[0]
+            if self.backend.name == "local":
+                # Local backend stores under STORAGE_DIR; build the path directly
+                return (self.storage_dir / sid / newest_name)
+            # Blob backend: download (with a /tmp cache) so pandas can read it
+            return self._materialize_csv_locally(sid, newest_name)
 
-        # Check preloaded benchmark data
+        # Preloaded benchmark data (read-only, on disk)
         preloaded_path = self.data_dir / "dataset=products" / f"shop_id={sid}" / "products.csv"
         if preloaded_path.exists():
             return preloaded_path
 
         return None
 
-    def save_uploaded_csv(self, shop_id: str, raw_bytes: bytes, shop_name: Optional[str] = None) -> Path:
-        """Saves an uploaded CSV into isolated storage."""
+    def _materialize_csv_locally(self, shop_id: str, name: str) -> Optional[Path]:
+        """Download a CSV from the backend into a /tmp cache path and return it."""
+        local_dir = Path(tempfile.gettempdir()) / "area303_shops" / shop_id / "data"
+        local_dir.mkdir(parents=True, exist_ok=True)
+        # name looks like "data/products_<ts>.csv" — flatten to a filename
+        filename = name.replace("/", "_")
+        local_path = local_dir / filename
+        # cache hit: skip the download
+        if local_path.exists() and local_path.stat().st_size > 0:
+            # sanity check we can still re-fetch: if backend has a newer file this
+            # still works because callers pass the newest name we just selected.
+            return local_path
+        raw = self.backend.read_bytes(shop_id, name)
+        if raw is None:
+            return None
+        local_path.write_bytes(raw)
+        return local_path
+
+    def save_uploaded_csv(self, shop_id: str, raw_bytes: bytes, shop_name: Optional[str] = None) -> str:
+        """Saves an uploaded CSV via the storage backend.
+
+        Returns the relative name under the shop dir (the backend key's tail),
+        so callers/tests can reference it without knowing the backend.
+        """
         sid = self.validate_shop_id(shop_id)
-        shop_d = self.get_shop_dir(sid)
         ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
-        target_path = shop_d / "data" / f"products_{ts}.csv"
-        target_path.write_bytes(raw_bytes)
+        name = f"data/products_{ts}.csv"
+        self.backend.write_bytes(sid, name, raw_bytes, content_type="text/csv")
 
         # Update shop configuration
         cfg = self.load_shop_config(sid)
         if shop_name:
             cfg["shop_name"] = shop_name
-        cfg["latest_csv"] = str(target_path)
+        cfg["latest_csv"] = name
         self.save_shop_config(sid, cfg)
 
-        return target_path
+        return name
 
     def load_shop_config(self, shop_id: str) -> Dict[str, Any]:
         """Loads shop configuration from config.json."""
         sid = self.validate_shop_id(shop_id)
-        path = self.get_shop_dir(sid) / "config.json"
-        if path.exists():
+        raw = self.backend.read_text(sid, "config.json")
+        if raw is not None:
             try:
-                return json.loads(path.read_text(encoding="utf-8"))
+                return json.loads(raw)
             except Exception:
                 pass
 
@@ -175,16 +238,16 @@ class ShopService:
     def save_shop_config(self, shop_id: str, config: Dict[str, Any]) -> None:
         """Saves shop configuration to config.json."""
         sid = self.validate_shop_id(shop_id)
-        path = self.get_shop_dir(sid) / "config.json"
-        path.write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.backend.write_text(sid, "config.json",
+                                json.dumps(config, ensure_ascii=False, indent=2))
 
     def load_learning_state(self, shop_id: str) -> Dict[str, Any]:
         """Loads persistent learning state or returns default."""
         sid = self.validate_shop_id(shop_id)
-        path = self.get_shop_dir(sid) / "learning_state.json"
-        if path.exists():
+        raw = self.backend.read_text(sid, "learning_state.json")
+        if raw is not None:
             try:
-                return json.loads(path.read_text(encoding="utf-8"))
+                return json.loads(raw)
             except Exception:
                 pass
         return default_learning_state()
@@ -192,8 +255,8 @@ class ShopService:
     def save_learning_state(self, shop_id: str, state: Dict[str, Any]) -> None:
         """Saves updated learning state."""
         sid = self.validate_shop_id(shop_id)
-        path = self.get_shop_dir(sid) / "learning_state.json"
-        path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.backend.write_text(sid, "learning_state.json",
+                                json.dumps(state, ensure_ascii=False, indent=2))
 
     def load_shop_data(
         self, shop_id: str
@@ -202,7 +265,7 @@ class ShopService:
         Loads and parses shop data into: (data_pool, snapshots, observations).
         """
         csv_path = self.get_shop_data_path(shop_id)
-        if not csv_path or not csv_path.exists():
+        if not csv_path or not (hasattr(csv_path, "exists") and csv_path.exists()):
             raise FileNotFoundError(f"No products CSV found for shop_id {shop_id}")
 
         data_pool, snapshots = load_csv_data(csv_path)
