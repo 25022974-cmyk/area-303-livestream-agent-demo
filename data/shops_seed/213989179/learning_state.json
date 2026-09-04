@@ -1,0 +1,225 @@
+{
+  "version": 1,
+  "last_session_id": "test_session_01",
+  "params": {
+    "alpha": 0.1,
+    "beta": 0.05,
+    "elasticity_beta_by_line": {}
+  },
+  "metrics": {
+    "n_sessions": 22,
+    "rolling_mape": 0.837,
+    "rolling_redeem_rate": 0.844,
+    "lift_vs_hold": null
+  },
+  "bounds": {
+    "alpha": [
+      0.1,
+      1.0
+    ],
+    "beta": [
+      0.05,
+      0.5
+    ]
+  },
+  "history": [
+    {
+      "session_id": "test_session_ai",
+      "date": "2026-08-28",
+      "session_mape": 0.111,
+      "mean_bias": 1.0,
+      "redeem_rate": 0.5,
+      "alpha": 0.5,
+      "beta": 0.2
+    },
+    {
+      "session_id": "test_session_01",
+      "date": "2026-08-27",
+      "session_mape": 0.111,
+      "mean_bias": 2.0,
+      "redeem_rate": 1.0,
+      "alpha": 0.5,
+      "beta": 0.18
+    },
+    {
+      "session_id": "test_session_ai",
+      "date": "2026-08-28",
+      "session_mape": 0.111,
+      "mean_bias": 1.0,
+      "redeem_rate": 0.5,
+      "alpha": 0.5,
+      "beta": 0.18
+    },
+    {
+      "session_id": "test_session_01",
+      "date": "2026-08-27",
+      "session_mape": 0.111,
+      "mean_bias": 2.0,
+      "redeem_rate": 1.0,
+      "alpha": 0.5,
+      "beta": 0.16
+    },
+    {
+      "session_id": "test_session_ai",
+      "date": "2026-08-28",
+      "session_mape": 0.111,
+      "mean_bias": 1.0,
+      "redeem_rate": 0.5,
+      "alpha": 0.5,
+      "beta": 0.16
+    },
+    {
+      "session_id": "test_session_01",
+      "date": "2026-08-27",
+      "session_mape": 0.111,
+      "mean_bias": 2.0,
+      "redeem_rate": 1.0,
+      "alpha": 0.5,
+      "beta": 0.14
+    },
+    {
+      "session_id": "test_session_ai",
+      "date": "2026-08-28",
+      "session_mape": 0.111,
+      "mean_bias": 1.0,
+      "redeem_rate": 0.5,
+      "alpha": 0.5,
+      "beta": 0.14
+    },
+    {
+      "session_id": "test_session_01",
+      "date": "2026-08-27",
+      "session_mape": 0.111,
+      "mean_bias": 2.0,
+      "redeem_rate": 1.0,
+      "alpha": 0.5,
+      "beta": 0.12
+    },
+    {
+      "session_id": "SES_1787857294701",
+      "date": "2026-08-27",
+      "session_mape": 25.456,
+      "mean_bias": 94.0,
+      "redeem_rate": 1.0,
+      "alpha": 0.45,
+      "beta": 0.1
+    },
+    {
+      "session_id": "test_session_ai",
+      "date": "2026-08-28",
+      "session_mape": 0.111,
+      "mean_bias": 1.0,
+      "redeem_rate": 0.5,
+      "alpha": 0.45,
+      "beta": 0.1
+    },
+    {
+      "session_id": "test_session_01",
+      "date": "2026-08-27",
+      "session_mape": 0.111,
+      "mean_bias": 2.0,
+      "redeem_rate": 1.0,
+      "alpha": 0.45,
+      "beta": 0.08
+    },
+    {
+      "session_id": "SES_1787859069349",
+      "date": "2026-08-27",
+      "session_mape": 13.645,
+      "mean_bias": 65.9,
+      "redeem_rate": 1.0,
+      "alpha": 0.4,
+      "beta": 0.06
+    },
+    {
+      "session_id": "SES_1787859072038",
+      "date": "2026-08-27",
+      "session_mape": 13.645,
+      "mean_bias": 65.9,
+      "redeem_rate": 1.0,
+      "alpha": 0.35,
+      "beta": 0.05
+    },
+    {
+      "session_id": "SES_1787859079192",
+      "date": "2026-08-27",
+      "session_mape": 13.645,
+      "mean_bias": 65.9,
+      "redeem_rate": 1.0,
+      "alpha": 0.3,
+      "beta": 0.05
+    },
+    {
+      "session_id": "SES_1787859234477",
+      "date": "2026-08-27",
+      "session_mape": 13.645,
+      "mean_bias": 65.9,
+      "redeem_rate": 1.0,
+      "alpha": 0.25,
+      "beta": 0.05
+    },
+    {
+      "session_id": "SES_1787859237781",
+      "date": "2026-08-27",
+      "session_mape": 13.645,
+      "mean_bias": 65.9,
+      "redeem_rate": 1.0,
+      "alpha": 0.2,
+      "beta": 0.05
+    },
+    {
+      "session_id": "SES_1788020974133",
+      "date": "2026-08-29",
+      "session_mape": 13.422,
+      "mean_bias": 27.5,
+      "redeem_rate": 1.0,
+      "alpha": 0.15,
+      "beta": 0.05
+    },
+    {
+      "session_id": "SES_1788022718750",
+      "date": "2026-08-29",
+      "session_mape": 10.067,
+      "mean_bias": 71.9,
+      "redeem_rate": 1.0,
+      "alpha": 0.1,
+      "beta": 0.05
+    },
+    {
+      "session_id": "test_session_ai",
+      "date": "2026-08-28",
+      "session_mape": 0.111,
+      "mean_bias": 1.0,
+      "redeem_rate": 0.5,
+      "alpha": 0.1,
+      "beta": 0.05
+    },
+    {
+      "session_id": "test_session_01",
+      "date": "2026-08-27",
+      "session_mape": 0.111,
+      "mean_bias": 2.0,
+      "redeem_rate": 1.0,
+      "alpha": 0.1,
+      "beta": 0.05
+    },
+    {
+      "session_id": "test_session_ai",
+      "date": "2026-08-28",
+      "session_mape": 0.111,
+      "mean_bias": 1.0,
+      "redeem_rate": 0.5,
+      "alpha": 0.1,
+      "beta": 0.05
+    },
+    {
+      "session_id": "test_session_01",
+      "date": "2026-08-27",
+      "session_mape": 0.111,
+      "mean_bias": 2.0,
+      "redeem_rate": 1.0,
+      "alpha": 0.1,
+      "beta": 0.05
+    }
+  ]
+}

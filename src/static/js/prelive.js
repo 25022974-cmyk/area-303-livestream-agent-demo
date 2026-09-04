@@ -46,18 +46,62 @@ document.addEventListener("DOMContentLoaded", () => {
   const reviewEmptyEl = document.getElementById("review-empty");
 
   /* ---------- Dòng sản phẩm (nhóm loại sản phẩm) ----------
-     Mirror logic buildScoredItems() trong mockups/server/static/js/app.js:
-     phân dòng theo loại sản phẩm chứ không theo thương hiệu. Kẹo chạy
-     trước Bánh do nhiều tên combo chứa cả hai từ. Chuẩn hoá NFC như app.js. */
-  const LINE_PATTERNS = [
-    { re: /quasure|ăn kiêng|không đường|ít đường|sugar free|no sugar|giảm đường|giảm 40% đường/, group: "Ăn kiêng / Ít đường" },
-    { re: /bánh ăn sáng|bánh tươi olive|bánh mì|sandwich|chà bông|olive/, group: "Bánh ăn sáng" },
-    { re: /kẹo|thạch|zoo|sumika|cheery|welly|migita|michoco|tứ quý/, group: "Kẹo" },
-    { re: /bánh|gooka|hura|goody|jamy|cookies|cracker|bông lan|cuộn|swissroll|layercake|ngũ cốc|bột ngũ cốc/, group: "Bánh" },
-  ];
-  function productGroup(name) {
+     Được lấy trực tiếp từ bảng category_list & product_categories (qua trường line). */
+  function isGift(name) {
+    if (!name) return false;
     const n = (name || "").normalize("NFC").toLowerCase();
-    return (LINE_PATTERNS.find(p => p.re.test(n)) || {}).group || "Khác";
+    if (n.includes("quà tặng không bán") || n.includes("hàng tặng không bán") || n.includes("hàng tặng") || n.includes("[gift]") || n.includes("quà tặng |") || n.includes("quà tặng -")) return true;
+    if (n.startsWith("quà tặng") || n.startsWith("[quà tặng") || n.startsWith("(quà tặng") || n.startsWith("[gift")) return true;
+    if (n.includes("[quà tặng]")) return true;
+    return false;
+  }
+
+  function productGroup(skuOrName) {
+    let line = "";
+    let name = "";
+    if (typeof skuOrName === "object" && skuOrName !== null) {
+      line = skuOrName.line || "";
+      name = skuOrName.name || "";
+    } else {
+      name = skuOrName || "";
+    }
+
+    if (isGift(name) || line === "Quà Tặng") return "Quà Tặng";
+    if (line && line !== "Khác" && line !== "Other" && line !== "Sản Phẩm Mới" && line !== "Tất cả sản phẩm") {
+      return line;
+    }
+
+    const n = (name || "").normalize("NFC").toLowerCase();
+    if (n.includes("quasure") || n.includes("sugar free") || n.includes("không đường")) return "Quasure Sugar Free";
+    if (n.includes("gooka") || n.includes("nougat")) return "Gooka Nougat Filling";
+    if (n.includes("zoo") || n.includes("cho bé") || n.includes("trẻ em") || n.includes("kem tuyết")) return "Kẹo Cho Bé";
+    if (n.includes("bánh ăn sáng") || n.includes("bánh mì") || n.includes("sandwich") || n.includes("olive") || n.includes("ăn sáng") || n.includes("castella")) return "Bánh Ăn Sáng";
+    if (n.includes("dinh dưỡng") || n.includes("tiểu đường") || n.includes("ngũ cốc") || n.includes("ăn kiêng")) return "Bánh Dinh Dưỡng";
+    if (n.includes("kẹo") || n.includes("sumika") || n.includes("cheery") || n.includes("welly") || n.includes("migita") || n.includes("tứ quý") || n.includes("michoco") || n.includes("thạch") || n.includes("gum")) return "Kẹo Ăn Vặt";
+    if (n.includes("bánh") || n.includes("hura") || n.includes("goody") || n.includes("jamy") || n.includes("cookies") || n.includes("cracker") || n.includes("bông lan")) return "Bánh Ăn Vặt";
+    return "Bánh Ăn Vặt";
+  }
+
+  function updateLineFilterOptions(skus) {
+    if (!filterLine) return;
+    const currentVal = filterLine.value;
+    const lines = new Set();
+    skus.forEach(s => {
+      const grp = s.product_group || s.line;
+      if (grp && grp !== "Khác" && grp !== "Other" && grp !== "Sản Phẩm Mới" && grp !== "Tất cả sản phẩm") {
+        lines.add(grp);
+      }
+    });
+    const sortedLines = Array.from(lines).sort((a, b) => {
+      if (a === "Quà Tặng") return 1;
+      if (b === "Quà Tặng") return -1;
+      return a.localeCompare(b, "vi");
+    });
+    filterLine.innerHTML = `<option value="">Tất cả dòng</option>` +
+      sortedLines.map(l => `<option value="${l}">${l}</option>`).join("");
+    if (currentVal && lines.has(currentVal)) {
+      filterLine.value = currentVal;
+    }
   }
 
   // Timeslot Elements
@@ -127,8 +171,9 @@ document.addEventListener("DOMContentLoaded", () => {
         allSkus = allSkus.map(s => ({
           ...s,
           is_combo: (s.name || "").toLowerCase().includes("combo"),
-          product_group: productGroup(s.name),
+          product_group: productGroup(s),
         }));
+        updateLineFilterOptions(allSkus);
 
         // Auto-select top 8 SKUs initially (hành vi gốc — tick tự do, không khoá).
         selectedSkuIds.clear();
@@ -372,8 +417,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return allSkus.filter(s => {
       // Bộ lọc dòng: so với product_group (nhóm loại sản phẩm), KHÔNG phải line thương hiệu.
       if (filters.line && s.product_group !== filters.line) return false;
-      if (filters.gift === "hide" && s.name.toUpperCase().includes("QUÀ TẶNG")) return false;
-      if (filters.gift === "only" && !s.name.toUpperCase().includes("QUÀ TẶNG")) return false;
+      const isGiftItem = s.product_group === "Quà Tặng" || isGift(s.name);
+      if (filters.gift === "hide" && isGiftItem) return false;
+      if (filters.gift === "only" && !isGiftItem) return false;
       if (filters.maxPrice && s.price > filters.maxPrice * 1000) return false;
       if (filters.minScore && s.hero_score < filters.minScore) return false;
       if (filters.search && !s.name.toLowerCase().includes(filters.search.toLowerCase())) return false;

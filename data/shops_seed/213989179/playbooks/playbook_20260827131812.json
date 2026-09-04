@@ -1,0 +1,371 @@
+{
+  "shop_id": "213989179",
+  "live_date": "2026-08-27",
+  "start_time": "00:00",
+  "end_time": "02:00",
+  "slot": "00:00 – 02:00",
+  "duration_mins": 120,
+  "items": [
+    {
+      "components": {
+        "freshness": 0,
+        "headroom": 0.6,
+        "ms": 1,
+        "rating": 0.987,
+        "rc": 0.994
+      },
+      "discount_percent": 10,
+      "hero_score": 0.7866,
+      "image_url": "https://down-vn.img.susercontent.com/file/vn-11134207-81ztc-mq3067wcjqbkdf",
+      "item_id": "17568700451",
+      "line": "Other",
+      "name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+      "price": 38700,
+      "price_original": 43000,
+      "rank": 1,
+      "raw_values": {
+        "freshness": 0,
+        "headroom": 0.26,
+        "monthly_sold": 7000,
+        "rating": 4.936619718309859,
+        "rating_count": 1846
+      }
+    },
+    {
+      "components": {
+        "freshness": 0,
+        "headroom": 0.517,
+        "ms": 1,
+        "rating": 0.99,
+        "rc": 1
+      },
+      "discount_percent": 19,
+      "hero_score": 0.7761,
+      "image_url": "https://down-vn.img.susercontent.com/file/vn-11134207-81ztc-mq2wj81jtrm374",
+      "item_id": "6225308367",
+      "line": "Zoo",
+      "name": "Kẹo Dẻo Hình Thú Zoo Áo Dầu Bibica  Nhiều Vị Trái Cây",
+      "price": 62775,
+      "price_original": 77500,
+      "rank": 2,
+      "raw_values": {
+        "freshness": 0,
+        "headroom": 0.17,
+        "monthly_sold": 3000,
+        "rating": 4.950847457627119,
+        "rating_count": 1180
+      }
+    },
+    {
+      "components": {
+        "freshness": 0,
+        "headroom": 1,
+        "ms": 1,
+        "rating": 0,
+        "rc": 1
+      },
+      "discount_percent": 10,
+      "hero_score": 0.7,
+      "image_url": "https://down-vn.img.susercontent.com/file/vn-11134207-81ztc-mq2uny3ti7m645",
+      "item_id": "18558695171",
+      "line": "Sumika",
+      "name": "Combo 5 Kẹo Mềm Sumika Sữa Bibica 70g",
+      "price": 48600,
+      "price_original": 54000,
+      "rank": 3,
+      "raw_values": {
+        "freshness": 0,
+        "headroom": 0.26,
+        "monthly_sold": 1000,
+        "rating": 4.864818024263432,
+        "rating_count": 577
+      }
+    },
+    {
+      "components": {
+        "freshness": 0.255,
+        "headroom": 1,
+        "ms": 1,
+        "rating": 0.778,
+        "rc": 0.096
+      },
+      "discount_percent": 5,
+      "hero_score": 0.6289,
+      "image_url": "https://down-vn.img.susercontent.com/file/vn-11134207-81ztc-mq31vq4it6gw07",
+      "item_id": "44101565136",
+      "line": "Hura",
+      "name": "Bánh Hura Sandwich Chà Bông Xốt Vị BBQ / Tảo Biển Bibica 156g - Bánh ăn sáng dinh dưỡng siêu ngon & tiện lợi",
+      "price": 39188,
+      "price_original": 41250,
+      "rank": 4,
+      "raw_values": {
+        "freshness": 0,
+        "headroom": 0.31,
+        "monthly_sold": 286,
+        "rating": 4.9480519480519485,
+        "rating_count": 77
+      }
+    },
+    {
+      "components": {
+        "freshness": 0,
+        "headroom": 0,
+        "ms": 1,
+        "rating": 0.482,
+        "rc": 1
+      },
+      "discount_percent": 21,
+      "hero_score": 0.6223,
+      "image_url": "https://down-vn.img.susercontent.com/file/vn-11134207-81ztc-mq2zhtji0o3k0b",
+      "item_id": "5091831437",
+      "line": "Gooka",
+      "name": "Combo 2 Bánh Gooka Cracker Ngũ Cốc Khoai Tây, Bắp Bibica 160g",
+      "price": 48153,
+      "price_original": 60800,
+      "rank": 5,
+      "raw_values": {
+        "freshness": 0,
+        "headroom": 0.15,
+        "monthly_sold": 570,
+        "rating": 4.870014771048744,
+        "rating_count": 677
+      }
+    },
+    {
+      "components": {
+        "freshness": 1,
+        "headroom": 0.182,
+        "ms": 0.859,
+        "rating": 1,
+        "rc": 0.08
+      },
+      "discount_percent": 19,
+      "hero_score": 0.605,
+      "image_url": "https://down-vn.img.susercontent.com/file/vn-11134207-81ztc-mq2ukiivxhxq85",
+      "item_id": "28433505734",
+      "line": "Sumika",
+      "name": "Combo 2 Kẹo Mút Sữa Sumika Bibica 135g",
+      "price": 46656,
+      "price_original": 57600,
+      "rank": 6,
+      "raw_values": {
+        "freshness": 0,
+        "headroom": 0.17,
+        "monthly_sold": 869,
+        "rating": 4.978494623655914,
+        "rating_count": 93
+      }
+    },
+    {
+      "components": {
+        "freshness": 0,
+        "headroom": 1,
+        "ms": 1,
+        "rating": 0.736,
+        "rc": 0.169
+      },
+      "discount_percent": 14,
+      "hero_score": 0.6028,
+      "image_url": "https://down-vn.img.susercontent.com/file/vn-11134207-81ztc-mq32674qphqke2",
+      "item_id": "17894583120",
+      "line": "Quasure",
+      "name": "Bánh Dinh Dưỡng Quasure Light Bibica Ngũ Cốc Bông Lan Bánh Quy Ăn Kiêng",
+      "price": 56943,
+      "price_original": 66600,
+      "rank": 7,
+      "raw_values": {
+        "freshness": 0,
+        "headroom": 0.22,
+        "monthly_sold": 6000,
+        "rating": 4.890014471780029,
+        "rating_count": 691
+      }
+    },
+    {
+      "components": {
+        "freshness": 0,
+        "headroom": 0.65,
+        "ms": 0.324,
+        "rating": 0.841,
+        "rc": 1
+      },
+      "discount_percent": 21,
+      "hero_score": 0.571,
+      "image_url": "https://down-vn.img.susercontent.com/file/vn-11134207-81ztc-mq306s87r1n2c8",
+      "item_id": "6219529787",
+      "line": "Quasure",
+      "name": "Combo 2 Bánh Quy Quasure Light Sữa Bibica 140g, Thực Phẩm Dành Cho Người Ăn Kiêng, Tiểu Đường",
+      "price": 64152,
+      "price_original": 81000,
+      "rank": 8,
+      "raw_values": {
+        "freshness": 0,
+        "headroom": 0.15,
+        "monthly_sold": 2000,
+        "rating": 4.926231557889472,
+        "rating_count": 4000
+      }
+    }
+  ],
+  "combos": [
+    {
+      "bundle_discount_pct": 15,
+      "bundle_price": 242746,
+      "combo_id": "combo_1",
+      "combo_name": "Combo Đột Phá: Combo 5 Kẹo Cứng Trái Cây Bốn Mùa B... + Combo Tiệc Sinh Nhật Cho Bé - ...",
+      "gift_cost": 0,
+      "gift_item_id": null,
+      "gift_name": null,
+      "hero_item_id": "17568700451",
+      "hero_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+      "hero_price": 38700,
+      "line": "Other",
+      "original_total_price": 285583,
+      "reason": "Ghép sản phẩm bán chạy nhất dòng Other với SKU tồn kho lâu nhất để đẩy hàng.",
+      "savings": 42837,
+      "slow_item_id": "49561265568",
+      "slow_name": "Combo Tiệc Sinh Nhật Cho Bé - 10 Kem Tuyết, 10 Sâu Kỳ Thú, 10 Dưa hấu 24g, Kẹo Thạch Nhân Dừa 360g, Kẹo Mút Cheery 570g",
+      "slow_price": 246883,
+      "type": "bundled",
+      "type_label": "Combo Thoát Hàng Tồn"
+    },
+    {
+      "bundle_discount_pct": 0,
+      "bundle_price": 38700,
+      "combo_id": "combo_2",
+      "combo_name": "Mua Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica TẶNG [QUÀ TẶNG KHÔNG BÁN] Một Túi K",
+      "gift_cost": 0,
+      "gift_item_id": "47262565646",
+      "gift_name": "[QUÀ TẶNG KHÔNG BÁN] Một Túi Kẹo dẻo Zoo 80g vị bất kỳ",
+      "hero_item_id": "17568700451",
+      "hero_name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+      "hero_price": 38700,
+      "line": "Other",
+      "original_total_price": 38700,
+      "reason": "Tăng tỷ lệ chốt đơn cho Hero SKU với quà tặng độc quyền khi mua tại phiên live.",
+      "savings": 0,
+      "slow_item_id": null,
+      "slow_name": null,
+      "slow_price": 0,
+      "type": "gift_with_purchase",
+      "type_label": "Quà Tặng Tri Ân"
+    }
+  ],
+  "vouchers": [
+    {
+      "discount_pct": 30,
+      "expected_sales": 10141.9,
+      "is_selected": true,
+      "item_id": "17568700451",
+      "line": "Other",
+      "min_spend": 50000,
+      "name": "Combo 5 Kẹo Cứng Trái Cây Bốn Mùa Bibica 70g",
+      "price_final": 100,
+      "price_original": 43000,
+      "voucher_amount": 30000,
+      "voucher_cost": 304255814
+    },
+    {
+      "discount_pct": 30,
+      "expected_sales": 7050.5,
+      "is_selected": true,
+      "item_id": "17894583120",
+      "line": "Quasure",
+      "min_spend": 50000,
+      "name": "Bánh Dinh Dưỡng Quasure Light Bibica Ngũ Cốc Bông Lan Bánh Quy Ăn Kiêng",
+      "price_final": 36620,
+      "price_original": 66600,
+      "voucher_amount": 10000,
+      "voucher_cost": 70504505
+    },
+    {
+      "discount_pct": 30,
+      "expected_sales": 3493.5,
+      "is_selected": true,
+      "item_id": "6225308367",
+      "line": "Zoo",
+      "min_spend": 50000,
+      "name": "Kẹo Dẻo Hình Thú Zoo Áo Dầu Bibica  Nhiều Vị Trái Cây",
+      "price_final": 44250,
+      "price_original": 77500,
+      "voucher_amount": 10000,
+      "voucher_cost": 34935484
+    },
+    {
+      "discount_pct": 30,
+      "expected_sales": 2200,
+      "is_selected": true,
+      "item_id": "6219529787",
+      "line": "Quasure",
+      "min_spend": 50000,
+      "name": "Combo 2 Bánh Quy Quasure Light Sữa Bibica 140g, Thực Phẩm Dành Cho Người Ăn Kiêng, Tiểu Đường",
+      "price_final": 56700,
+      "price_original": 81000,
+      "voucher_amount": 0,
+      "voucher_cost": 0
+    },
+    {
+      "discount_pct": 30,
+      "expected_sales": 1377.8,
+      "is_selected": true,
+      "item_id": "18558695171",
+      "line": "Sumika",
+      "min_spend": 50000,
+      "name": "Combo 5 Kẹo Mềm Sumika Sữa Bibica 70g",
+      "price_final": 7800,
+      "price_original": 54000,
+      "voucher_amount": 30000,
+      "voucher_cost": 41333333
+    },
+    {
+      "discount_pct": 30,
+      "expected_sales": 1106.8,
+      "is_selected": true,
+      "item_id": "28433505734",
+      "line": "Sumika",
+      "min_spend": 50000,
+      "name": "Combo 2 Kẹo Mút Sữa Sumika Bibica 135g",
+      "price_final": 20320,
+      "price_original": 57600,
+      "voucher_amount": 20000,
+      "voucher_cost": 22135361
+    },
+    {
+      "discount_pct": 30,
+      "expected_sales": 720.7,
+      "is_selected": true,
+      "item_id": "5091831437",
+      "line": "Gooka",
+      "min_spend": 50000,
+      "name": "Combo 2 Bánh Gooka Cracker Ngũ Cốc Khoai Tây, Bắp Bibica 160g",
+      "price_final": 22560,
+      "price_original": 60800,
+      "voucher_amount": 20000,
+      "voucher_cost": 14415000
+    },
+    {
+      "discount_pct": 30,
+      "expected_sales": 414.7,
+      "is_selected": true,
+      "item_id": "44101565136",
+      "line": "Hura",
+      "min_spend": 50000,
+      "name": "Bánh Hura Sandwich Chà Bông Xốt Vị BBQ / Tảo Biển Bibica 156g - Bánh ăn sáng dinh dưỡng siêu ngon & tiện lợi",
+      "price_final": -1125,
+      "price_original": 41250,
+      "voucher_amount": 30000,
+      "voucher_cost": 12441000
+    }
+  ],
+  "summary": {
+    "budget_used": 500020497,
+    "budget_utilization_pct": 100,
+    "projected_lift_pct": 27.9,
+    "projected_sales_units": 26506,
+    "recommended_timeslot": "00:00 – 02:00",
+    "selected_skus": 8,
+    "total_budget": 500000000,
+    "total_skus": 8
+  },
+  "updated_at": "2026-08-27T13:18:12.739333+00:00"
+}

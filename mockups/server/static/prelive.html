@@ -39,11 +39,9 @@
           <label class="muted">Bộ lọc:</label>
           <select class="inp !py-1.5 !w-auto" x-model="f.line">
             <option value="">Tất cả dòng</option>
-            <option>Ăn kiêng / Ít đường</option>
-            <option>Bánh ăn sáng</option>
-            <option>Kẹo</option>
-            <option>Bánh</option>
-            <option>Khác</option>
+            <template x-for="cat in availableLines" :key="cat">
+              <option :value="cat" x-text="cat"></option>
+            </template>
           </select>
           <select class="inp !py-1.5 !w-auto" x-model="f.gift">
             <option value="">Tất cả SKU</option>

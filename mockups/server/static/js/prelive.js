@@ -61,12 +61,26 @@ function prelive() {
       this.save();
     },
 
+    get availableLines() {
+      const set = new Set();
+      if (this.AREA303?.DATA?.category_list && this.AREA303.DATA.category_list.length) {
+        this.AREA303.DATA.category_list.forEach(c => set.add(c));
+      }
+      this.items.forEach(i => { if (i.line) set.add(i.line); });
+      return Array.from(set).filter(Boolean).sort();
+    },
+
     lineTag(line) {
       const m = {
-        "Ăn kiêng / Ít đường": "tag-core",
-        "Bánh ăn sáng": "tag-clear",
-        "Kẹo": "tag-bundle",
-        "Bánh": "tag-hook",
+        "Bánh Ăn Sáng": "tag-clear",
+        "Bánh Dinh Dưỡng": "tag-core",
+        "Bánh Ăn Vặt": "tag-hook",
+        "Gooka Nougat Filling": "tag-bundle",
+        "Kẹo Cho Bé": "tag-hook",
+        "Kẹo Ăn Vặt": "tag-bundle",
+        "Quasure Sugar Free": "tag-core",
+        "Sản Phẩm Mới": "tag-core",
+        "Quà Tặng": "tag-clear",
         "Khác": "tag-soldout"
       };
       return m[line] || "tag-soldout";

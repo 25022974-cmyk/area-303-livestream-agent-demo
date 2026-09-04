@@ -20,12 +20,13 @@ import math
 from typing import Any, Dict, List, Optional
 
 from ._helpers import norm, to_float, ts_to_dt
+from .loader import is_gift_product
 
-W_MS = 0.30
-W_RC = 0.25
-W_RATING = 0.15
-W_HEADROOM = 0.15
-W_FRESHNESS = 0.15
+W_MS = 0.2
+W_RC = 0.2
+W_RATING = 0.2
+W_HEADROOM = 0.2
+W_FRESHNESS = 0.2
 
 HEADROOM_CAP = 0.36
 FRESHNESS_LAMBDA_DAYS = 30.0
@@ -89,6 +90,10 @@ def calculate_hero_scores(
                 + W_HEADROOM * headroom_norm[idx]
                 + W_FRESHNESS * freshness_norm[idx]
             )
+            # Hàng quà tặng không bán được giảm điểm để thấp hơn các SKU bán thông thường
+            if it["line"] == "Quà Tặng" or is_gift_product(it["name"]):
+                score = score * 0.05
+
             scored_items.append({
                 "item_id": it["item_id"],
                 "name": it["name"],
