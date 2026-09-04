@@ -70,3 +70,10 @@ def postlive():
     """Post-live Review stage."""
     ctx = _get_context("postlive")
     return render_template("postlive.html", **ctx)
+
+
+@ui_bp.route("/dashboard")
+def dashboard():
+    """Generated Data Management & Audit Dashboard."""
+    ctx = _get_context("dashboard")
+    return render_template("dashboard.html", **ctx)

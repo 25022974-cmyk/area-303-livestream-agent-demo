@@ -19,21 +19,6 @@ import os
 from pathlib import Path
 
 
-def _is_inside(path: Path, base: Path) -> bool:
-    """True when ``path`` is ``base`` itself or a descendant of it.
-
-    Used to detect whether STORAGE_DIR points at the repo's working dir (local
-    dev — never seed, the developer owns that state) or an external /tmp-style
-    location (serverless — must seed from the committed snapshot).
-    """
-    try:
-        p = path.resolve()
-        b = base.resolve()
-        return p == b or b in p.parents
-    except OSError:
-        return False
-
-
 # Paths
 SRC_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SRC_DIR.parent
@@ -43,8 +28,7 @@ DATA_DIR = ROOT_DIR / "mockups" / "Data" / "country_code=vn"
 
 # Per-shop writable storage. On serverless hosts (Vercel) the bundle filesystem
 # is read-only except /tmp, which is wiped when an instance sleeps/redeploys.
-# We therefore point STORAGE_DIR at a writable subdir of /tmp in production and
-# seed it once per instance from SEED_DIR (committed at data/shops_seed/). In
+# We therefore point STORAGE_DIR at a writable subdir of /tmp in production. In
 # local development this resolves to the original repo path data/shops.
 #
 # Resolution order:
@@ -60,30 +44,8 @@ elif os.environ.get("VERCEL") or os.environ.get("LAMBDA_TASK_ROOT"):
 else:
     STORAGE_DIR = ROOT_DIR / "data" / "shops"
 
-# Seed snapshot committed to the repo. Copied into STORAGE_DIR on cold start so
-# the services' write path targets a writable copy under /tmp rather than the
-# read-only bundle. Falls back to the dev working dir when no seed is present.
-SEED_DIR = (ROOT_DIR / "data" / "shops_seed") if (ROOT_DIR / "data" / "shops_seed").exists() else STORAGE_DIR
 STATIC_DIR = SRC_DIR / "static"
 TEMPLATES_DIR = SRC_DIR / "templates"
-
-# Create storage directory if not present. Seeding only happens when
-# STORAGE_DIR lives OUTSIDE the repo (i.e. on a /tmp-style serverless path):
-# inside the repo (local dev) data/shops is the live working dir and we must
-# never overwrite a developer's in-progress state with the committed seed.
-from .storage_sync import ensure_storage_seeded as _ensure_storage_seeded
-
-if not _is_inside(STORAGE_DIR, ROOT_DIR):
-    # Serverless: seed from committed snapshot into /tmp (writable).
-    # ensure_storage_seeded is best-effort and never raises.
-    _ensure_storage_seeded(STORAGE_DIR, SEED_DIR)
-else:
-    # Local dev: ensure the working dir exists. Tolerate read-only filesystems
-    # (e.g. when the repo lives on a read-only mount) without crashing import.
-    try:
-        STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-    except OSError:
-        pass
 
 
 def _load_dotenv() -> None:

@@ -1,11 +1,7 @@
-# Per-shop working state (draft playbooks, orders, reviews, learning_state,
-# uploaded CSVs) is written at runtime — never commit. The commit-pressed
-# seed snapshot however lives at data/shops_seed/ and MUST be tracked so that
-# Vercel cold starts can populate writable /tmp storage.
-data/shops/
-!data/shops_seed/
+data/
+server.log
+
 # AI / LLM secrets — khong commit
 .env
 .env.local
 __pycache__/
-
