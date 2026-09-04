@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const statGmvEl = document.getElementById("postlive-stat-gmv");
   const statAovEl = document.getElementById("postlive-stat-aov");
   const skuTableBody = document.getElementById("postlive-sku-table-body");
-  
+
   // Learner Elements
   const learnerAlphaEl = document.getElementById("learner-alpha");
   const learnerBetaEl = document.getElementById("learner-beta");
@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     skuPerformance = items.map(sku => {
-      const actualCount = orderCountByItem[sku.item_id] || Math.floor(Math.random() * 8) + 2; // fallback simulated actuals if empty
+      const actualCount = orderCountByItem[sku.item_id] || 0; // fallback simulated actuals if empty
       const estCount = Math.round(sku.raw_values?.monthly_sold ? sku.raw_values.monthly_sold / 30 : 15);
       const variancePct = estCount > 0 ? Math.round(((actualCount - estCount) / estCount) * 100) : 0;
 
