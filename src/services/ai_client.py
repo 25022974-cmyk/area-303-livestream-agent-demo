@@ -33,35 +33,28 @@ Proxy contract (Anthropic Messages API):
 """
 
 import json
+import os
 import ssl
 import urllib.error
 import urllib.request
 
 
 def _make_ssl_context() -> ssl.SSLContext:
-    """SSL context robust to runtimes/installs with no discoverable CA bundle.
+    """SSL context robust to runtimes with no usable CA bundle.
 
-    Same rationale as storage.vercel_blob._ssl_context(): Vercel python runtime
-    and some minimal Python installs fail "unable to get local issuer
-    certificate" because CERT_REQUIRED is on but no CA bundle is loadable.
-    Prefer certifi, then explicitly load system roots (only if it yields CAs),
-    last-resort an unverified context (the AI proxy call carries Bearer auth,
-    bounded risk). See vercel_blob._ssl_context for details.
+    Same rationale as storage.vercel_blob._ssl_context(): even with certifi
+    installed, Lambda has not been able to verify blob.vercel-app.com's chain.
+    So on Vercel we use an unverified context (the AI proxy call carries
+    Bearer auth, bounded risk); locally we still prefer strict verification.
     """
-    try:
-        import certifi  # type: ignore
-        ctx = ssl.create_default_context(cafile=certifi.where())
-        if ctx.get_ca_certs():
-            return ctx
-    except Exception:
-        pass
-    try:
-        ctx = ssl.create_default_context()
-        ctx.load_default_certs()
-        if ctx.get_ca_certs():
-            return ctx
-    except Exception:
-        pass
+    if not os.environ.get("VERCEL"):
+        try:
+            import certifi  # type: ignore
+            ctx = ssl.create_default_context(cafile=certifi.where())
+            if ctx.get_ca_certs():
+                return ctx
+        except Exception:
+            pass
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE

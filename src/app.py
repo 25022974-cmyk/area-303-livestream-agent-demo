@@ -20,7 +20,7 @@ from flask import Flask
 
 from .config import STATIC_DIR, TEMPLATES_DIR
 from .models._helpers import format_vnd
-from .routes import api_dashboard_bp, api_pipeline_bp, api_sessions_bp, api_shops_bp, ui_bp
+from .routes import api_dashboard_bp, api_debug_bp, api_pipeline_bp, api_sessions_bp, api_shops_bp, ui_bp
 
 
 def create_app() -> Flask:
@@ -72,6 +72,7 @@ def create_app() -> Flask:
     app.register_blueprint(api_pipeline_bp)
     app.register_blueprint(api_sessions_bp)
     app.register_blueprint(api_dashboard_bp)
+    app.register_blueprint(api_debug_bp)
 
     return app
 

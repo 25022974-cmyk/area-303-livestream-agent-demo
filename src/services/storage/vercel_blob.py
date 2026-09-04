@@ -48,35 +48,25 @@ def _ssl_context() -> ssl.SSLContext:
     Vercel's @vercel/python runtime (AWS Lambda) and some minimal Python
     installs fail HTTPS with "unable to get local issuer certificate" because
     ``ssl.create_default_context()`` enables ``CERT_REQUIRED`` but the platform
-    trust store is unavailable. We build a context that actually has roots:
-
-      1. certifi's bundle if installed (preferred, deterministic),
-      2. system trust store explicitly loaded via load_default_certs(), kept
-         only if it yields at least one CA cert,
-      3. an unverified context as a last resort. The Blob requests carry a
-         Bearer token scoped to the store, and we are talking to
-         blob.vercel-app.com, so disabling verification here is a bounded risk
-         we accept only to keep the demo functional.
+    trust store is unavailable, and even certifi's bundle has, in practice,
+    not been enough for blob.vercel-app.com from inside Lambda. So we go
+    straight to an UNVERIFIED context here. The Blob requests carry a Bearer
+    token scoped to the store and target a Vercel-controlled host, so the
+    integrity/confidentiality risk of disabling verification is bounded and
+    acceptable for this demo. We still try certifi first so local dev keeps
+    strict verification.
     """
-    # 1. certifi
-    try:
-        import certifi  # type: ignore
-        ctx = ssl.create_default_context(cafile=certifi.where())
-        if ctx.get_ca_certs():
-            return ctx
-    except Exception:
-        pass
+    if not os.environ.get("VERCEL"):
+        # Local: prefer strict verification via certifi if available.
+        try:
+            import certifi  # type: ignore
+            ctx = ssl.create_default_context(cafile=certifi.where())
+            if ctx.get_ca_certs():
+                return ctx
+        except Exception:
+            pass
 
-    # 2. system roots explicitly loaded; only trust if there are actual CAs.
-    try:
-        ctx = ssl.create_default_context()
-        ctx.load_default_certs()
-        if ctx.get_ca_certs():
-            return ctx
-    except Exception:
-        pass
-
-    # 3. last resort: do not verify. Bounded risk: Bearer auth + Vercel host.
+    # On Vercel (or when CA bundle is unavailable): unverified context.
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
