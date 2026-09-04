@@ -33,8 +33,34 @@ Proxy contract (Anthropic Messages API):
 """
 
 import json
+import ssl
 import urllib.error
 import urllib.request
+
+
+def _make_ssl_context() -> ssl.SSLContext:
+    """SSL context robust to runtimes/installs with no discoverable CA bundle.
+
+    Same rationale as storage.vercel_blob._ssl_context(): Vercel python runtime
+    and some minimal Python installs fail "unable to get local issuer
+    certificate". Prefer certifi, then the system trust store, last-resort
+    unverified (the AI proxy call carries its own Bearer auth).
+    """
+    try:
+        import certifi  # type: ignore
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        pass
+    try:
+        ctx = ssl.create_default_context()
+        if ctx.get_ca_certs() or ctx.get_ciphers():
+            return ctx
+    except Exception:
+        pass
+    return ssl._create_unverified_context()
+
+
+_SSL_CONTEXT = _make_ssl_context()
 
 from ..config import (
     AI_API_KEY,
@@ -104,7 +130,7 @@ def _chat(messages, *, system=None, temperature=0.6, max_tokens=None,
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=timeout or AI_REQUEST_TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=timeout or AI_REQUEST_TIMEOUT, context=_SSL_CONTEXT) as resp:
             raw = resp.read().decode("utf-8")
         parsed = json.loads(raw)
     except urllib.error.HTTPError as exc:

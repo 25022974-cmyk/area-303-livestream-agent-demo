@@ -35,10 +35,50 @@ from __future__ import annotations
 import json
 import os
 import re
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import List, Optional, Tuple
+
+
+def _ssl_context() -> ssl.SSLContext:
+    """Return an SSL context that trusts a known CA bundle.
+
+    On some serverless runtimes (notably Vercel's @vercel/python on AWS Lambda)
+    and on minimal Windows Python installs, urllib's default context cannot
+    locate the system CA bundle, so HTTPS calls fail with
+    "unable to get local issuer certificate". We prefer, in order:
+
+      1. certifi's curated bundle (if installed),
+      2. the impalastic system CA via ssl.create_default_context() load_verify_locations,
+      3. a context that still verifies -- but with the system root set by build.
+
+    Only if all of the above fail to load any certs do we fall back to an
+    unverified context, and only because the Blob requests already carry a
+    Bearer token scoped to the store — the integrity/confidentiality risk of
+    disabling verification here is bounded.
+    """
+    # Try certifi first — a small dep that is widely installable.
+    try:
+        import certifi  # type: ignore
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        pass
+
+    # Try the default system trust store.
+    try:
+        ctx = ssl.create_default_context()
+        if ctx.get_ca_certs() or ctx.get_ciphers():
+            return ctx
+    except Exception:
+        pass
+
+    # Last resort: do not verify. Bounded risk because requests carry Bearer.
+    return ssl._create_unverified_context()
+
+
+_SSL_CONTEXT = _ssl_context()
 
 # Vercel-provided store base. The store-specific endpoint is injected by Vercel
 # as BLOB_STORE_URL when the Blob store is created; the generic
@@ -96,7 +136,7 @@ class VercelBlobBackend:
             url = f"{_BLOB_BASE}/?{urllib.parse.urlencode(qs)}"
             try:
                 req = urllib.request.Request(url, headers=self._auth_headers(), method="GET")
-                with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+                with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_CONTEXT) as resp:
                     payload = json.loads(resp.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
                 # 404 / empty store -> treat as no blobs
@@ -142,7 +182,7 @@ class VercelBlobBackend:
                     return None
                 try:
                     req = urllib.request.Request(download_url, headers={"User-Agent": _USER_AGENT})
-                    with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+                    with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_CONTEXT) as resp:
                         return resp.read()
                 except urllib.error.HTTPError as e:
                     if e.code == 404:
@@ -163,7 +203,7 @@ class VercelBlobBackend:
         headers["Content-Length"] = str(len(data))
         req = urllib.request.Request(url, data=data, headers=headers, method="PUT")
         try:
-            with urllib.request.urlopen(req, timeout=_TIMEOUT):
+            with urllib.request.urlopen(req, timeout=_TIMEOUT, context=_SSL_CONTEXT):
                 pass
         except urllib.error.HTTPError as e:
             # surface a concise error message

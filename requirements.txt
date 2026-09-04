@@ -4,7 +4,10 @@
 # exact resolved versions from uv.lock for reproducible builds.
 #
 # urllib is part of the stdlib, so the AI proxy client needs no extra dep.
-
+# certifi gives urllib a CA bundle on runtimes/installs that don't ship one
+# (Vercel python runtime on AWS Lambda, some minimal Windows Pythons); the
+# Blob/AI HTTPS clients fall back to an unverified context only if it is absent.
 Flask==3.1.3
 pandas==3.0.5
 numpy==2.5.2
+certifi==2025.7.14
