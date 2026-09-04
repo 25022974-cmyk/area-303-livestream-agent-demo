@@ -2,7 +2,7 @@
 name = "area-303-livestream-agent-demo"
 version = "0.1.0"
 description = "Livestream Strategy AI Agent with pre-loaded Bibica Data"
-authors = "ST5K Team"
+authors = ["ST5K Team"]
 requires-python = ">=3.13"
 dependencies = [
     "flask>=3.1.3",
