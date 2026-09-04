@@ -22,33 +22,6 @@ from pathlib import Path
 # Paths
 SRC_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SRC_DIR.parent
-# Benchmark data is read-only (committed under mockups/); it ships inside the
-# Vercel build and never needs to be writable, so DATA_DIR is unchanged.
-DATA_DIR = ROOT_DIR / "preloaded_data"
-
-# Per-shop writable storage. On serverless hosts (Vercel) the bundle filesystem
-# is read-only except /tmp, which is wiped when an instance sleeps/redeploys.
-# We therefore point STORAGE_DIR at a writable subdir of /tmp in production. In
-# local development this resolves to the original repo path data/shops.
-#
-# Resolution order:
-#   1. AREA303_STORAGE_DIR  — explicit override (tests / forced location)
-#   2. /tmp derived path     — when Vercel sets VERCEL_TMP at runtime
-#   3. ROOT / data / shops   — local development fallback
-_tmp_base = os.environ.get("VERCEL_TMP") or os.environ.get("TMPDIR")
-if os.environ.get("AREA303_STORAGE_DIR"):
-    STORAGE_DIR = Path(os.environ["AREA303_STORAGE_DIR"])
-elif _tmp_base:
-    STORAGE_DIR = Path(_tmp_base) / "area303_shops"
-else:
-    STORAGE_DIR = ROOT_DIR / "data" / "shops"
-
-STATIC_DIR = SRC_DIR / "static"
-TEMPLATES_DIR = SRC_DIR / "templates"
-
-# Create storage directory if not present.
-STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-
 
 def _load_dotenv() -> None:
     """Loads simple KEY=VALUE pairs from a .env file into os.environ (stdlib only).
@@ -79,6 +52,41 @@ def _load_dotenv() -> None:
 
 
 _load_dotenv()
+
+# Benchmark data is read-only (committed under mockups/); it ships inside the
+# Vercel build and never needs to be writable, so DATA_DIR is unchanged.
+DATA_DIR = ROOT_DIR / "preloaded_data"
+
+# Per-shop writable storage. On serverless hosts (Vercel) the bundle filesystem
+# is read-only except /tmp, which is wiped when an instance sleeps/redeploys.
+# We therefore point STORAGE_DIR at a writable subdir of /tmp in production. In
+# local development this resolves to the original repo path data/shops.
+#
+# Resolution order:
+#   1. BLOB_READ_WRITE_TOKEN present -> Vercel Blob Storage
+#   2. AREA303_STORAGE_DIR  — explicit override (tests / forced location)
+#   3. /tmp derived path     — when Vercel sets VERCEL_TMP at runtime
+#   4. ROOT / data / shops   — local development fallback
+
+_blob_token = os.environ.get("BLOB_READ_WRITE_TOKEN", "").strip()
+if _blob_token:
+    from .blob_path import BlobPath
+    STORAGE_DIR = BlobPath("shops")
+else:
+    _tmp_base = os.environ.get("VERCEL_TMP") or os.environ.get("TMPDIR")
+    if os.environ.get("AREA303_STORAGE_DIR"):
+        STORAGE_DIR = Path(os.environ["AREA303_STORAGE_DIR"])
+    elif _tmp_base:
+        STORAGE_DIR = Path(_tmp_base) / "area303_shops"
+    else:
+        STORAGE_DIR = ROOT_DIR / "data" / "shops"
+
+# Create storage directory if not present.
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+STATIC_DIR = SRC_DIR / "static"
+TEMPLATES_DIR = SRC_DIR / "templates"
+
 
 # Upload limits
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
