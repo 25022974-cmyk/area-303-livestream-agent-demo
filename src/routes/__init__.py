@@ -19,7 +19,6 @@ from .api_pipeline import api_pipeline_bp
 from .api_sessions import api_sessions_bp
 from .api_shops import api_shops_bp
 from .api_dashboard import api_dashboard_bp
-from .api_debug import api_debug_bp
 from .ui import ui_bp
 
-__all__ = ["ui_bp", "api_shops_bp", "api_pipeline_bp", "api_sessions_bp", "api_dashboard_bp", "api_debug_bp"]
+__all__ = ["ui_bp", "api_shops_bp", "api_pipeline_bp", "api_sessions_bp", "api_dashboard_bp"]

@@ -60,6 +60,18 @@ class BlobPath:
         return self._key.split("/")[-1] if "/" in self._key else self._key
 
     @property
+    def stem(self) -> str:
+        """Filename without extension, mirroring ``pathlib.Path.stem``.
+
+        For ``"playbook_20260827183418.json"`` -> ``"playbook_20260827183418"``.
+        Used by session_service to derive a date from a playbook file name.
+        """
+        n = self.name
+        if "." in n:
+            return n.rsplit(".", 1)[0]
+        return n
+
+    @property
     def parent(self) -> "BlobPath":
         parts = self._key.rsplit("/", 1)
         return BlobPath(parts[0]) if len(parts) > 1 else BlobPath("")
