@@ -24,7 +24,7 @@ SRC_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SRC_DIR.parent
 # Benchmark data is read-only (committed under mockups/); it ships inside the
 # Vercel build and never needs to be writable, so DATA_DIR is unchanged.
-DATA_DIR = ROOT_DIR / "mockups" / "Data" / "country_code=vn"
+DATA_DIR = ROOT_DIR / "preloaded_data"
 
 # Per-shop writable storage. On serverless hosts (Vercel) the bundle filesystem
 # is read-only except /tmp, which is wiped when an instance sleeps/redeploys.
