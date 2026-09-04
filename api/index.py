@@ -25,12 +25,33 @@ cwd that does not include the project root, which would break
 ``from src.app import create_app``.
 """
 
+import os
 import pathlib
 import sys
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+
+# ──────────────────────────────────────────────────────────────────────
+# Ensure httpx/urllib can verify TLS even on runtimes/installs whose own
+# trust store is missing (Vercel @vercel/python on AWS Lambda, and some
+# minimal Windows Pythons). Both httpx (used by the `vercel.blob` SDK
+# backing BlobPath) and urllib respect SSL_CERT_FILE / SSL_CA_FILE /
+# REQUESTS_CA_BUNDLE when trust_env is on. Pointing them at certifi's
+# Mozilla bundle, if available, gives a complete root + intermediate set
+# and fixes "[SSL: CERTIFICATE_VERIFY_FAILED] unable to get local issuer
+# certificate" on Blob calls. Set BEFORE importing src.app so any storage
+# / http client picks it up.
+# ──────────────────────────────────────────────────────────────────────
+for _ca_env in ("SSL_CERT_FILE", "SSL_CA_FILE", "REQUESTS_CA_BUNDLE"):
+    if not os.environ.get(_ca_env):
+        try:
+            import certifi  # type: ignore
+            os.environ[_ca_env] = certifi.where()
+            break
+        except Exception:
+            pass
 
 from src.app import create_app  # noqa: E402
 

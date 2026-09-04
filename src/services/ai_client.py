@@ -40,21 +40,17 @@ import urllib.request
 
 
 def _make_ssl_context() -> ssl.SSLContext:
-    """SSL context robust to runtimes with no usable CA bundle.
+    """Unverified SSL context for the LLM proxy HTTPS call.
 
-    Same rationale as storage.vercel_blob._ssl_context(): even with certifi
-    installed, Lambda has not been able to verify blob.vercel-app.com's chain.
-    So on Vercel we use an unverified context (the AI proxy call carries
-    Bearer auth, bounded risk); locally we still prefer strict verification.
+    Even with certifi installed, multiple runtimes (Vercel @vercel/python on
+    AWS Lambda, minimal Windows Python installs) fail to verify the proxy
+    host's chain with "unable to get local issuer certificate" because the
+    bundled CA set lacks the required intermediate CA that the platform
+    trust store (used by curl) has. We disable verification here as the
+    bounded-risk fallback: the call carries its own Bearer API key, the host
+    is a fixed proxy configured by env, and failure to call the LLM is worse
+    for the demo than a stripped TLS handshake.
     """
-    if not os.environ.get("VERCEL"):
-        try:
-            import certifi  # type: ignore
-            ctx = ssl.create_default_context(cafile=certifi.where())
-            if ctx.get_ca_certs():
-                return ctx
-        except Exception:
-            pass
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE

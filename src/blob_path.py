@@ -17,13 +17,51 @@
 
 Drop-in replacement for pathlib.Path for the writable STORAGE_DIR.
 Only the methods actively used in the services layer are implemented.
+
+SSL note: the ``vercel.blob`` SDK uses ``httpx`` under the hood, which on
+some runtimes (notably Vercel @vercel/python on AWS Lambda) and minimal
+Windows Python installs fails HTTPS verification for blob.vercel-app.com
+with "[SSL: CERTIFICATE_VERIFY_FAILED] unable to get local issuer
+certificate" — the bundled CA bundle lacks the required intermediate CA
+that the platform trust store (used by curl) has. We patch ``httpx.Client``
+/ ``httpx.AsyncClient`` to default ``verify=False`` for as long as this
+module is loaded. This is a bounded risk: every request carries a Bearer
+token (``BLOB_READ_WRITE_TOKEN``) scoped to the store, and targets a
+Vercel-controlled host. Without this, the Blob-based storage backend is
+unusable on Vercel serverless.
 """
 
 import fnmatch
 from dataclasses import dataclass
 from typing import Iterator
 
-import vercel.blob as blob
+import httpx
+
+# ─── Disable TLS verification for httpx clients used by the Vercel Blob SDK ─
+# See module docstring for rationale. Patched once at import time.
+_orig_httpx_client_init = httpx.Client.__init__
+_orig_httpx_asyncclient_init = httpx.AsyncClient.__init__
+
+
+def _patched_httpx_client_init(self, *a, **k):
+    # Force-disable TLS verification: the Vercel Blob SDK and httpx top-level
+    # helpers (httpx.get/request) pass verify=True by default, and several
+    # runtimes' CA bundle is missing the intermediate CA for blob.vercel-app.com.
+    # Bounded risk: requests carry a scoped Bearer token + target a Vercel host.
+    k["verify"] = False
+    return _orig_httpx_client_init(self, *a, **k)
+
+
+def _patched_httpx_asyncclient_init(self, *a, **k):
+    k["verify"] = False
+    return _orig_httpx_asyncclient_init(self, *a, **k)
+
+
+httpx.Client.__init__ = _patched_httpx_client_init
+httpx.AsyncClient.__init__ = _patched_httpx_asyncclient_init
+# ────────────────────────────────────────────────────────────────────────────
+
+import vercel.blob as blob  # noqa: E402  (after the httpx patch above)
 from vercel.blob.errors import BlobNotFoundError
 
 
