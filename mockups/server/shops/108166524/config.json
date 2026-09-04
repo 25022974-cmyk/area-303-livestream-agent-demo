@@ -1,9 +1,0 @@
-{
-  "shop_id": "108166524",
-  "shop_name": "",
-  "budget_voucher_month": 500000000.0,
-  "alpha": 0.5,
-  "beta": 0.2,
-  "use_dp_knapsack": true,
-  "csv_path": "D:\\UET\\competition\\AREA_303\\server\\shops\\108166524\\data\\products_20260826023153.csv"
-}
